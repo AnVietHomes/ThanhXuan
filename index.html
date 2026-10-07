@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>360 Real Estate Viewer - An Viet Homes</title>
+    <!-- Tích hợp Tailwind CSS qua CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Hiệu ứng Glassmorphism */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: -8px 0 32px 0 rgba(31, 38, 135, 0.2);
+        }
+        
+        /* Hiệu ứng trượt mượt mà cho Iframe và Panel */
+        .transition-transform {
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* Ẩn thanh cuộn nhưng vẫn cuộn được nội dung */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 overflow-hidden font-sans text-gray-100">
+
+    <!-- Container chính -->
+    <div class="relative w-full h-screen flex">
+        
+        <!-- Iframe Panoee -->
+        <div id="viewer-container" class="w-full h-full transition-transform transform translate-x-0 relative z-0 bg-black">
+            <iframe id="pano-iframe" src="https://tour.panoee.net/6ac5cdafbbd7eb16f960f542" 
+                    frameborder="0" width="100%" height="100%" allowfullscreen></iframe>
+        </div>
+
+        <!-- Glassmorphism Panel -->
+        <div id="info-panel" class="glass-panel absolute top-0 right-0 w-[420px] h-full p-6 flex flex-col transform translate-x-full transition-transform z-10">
+            
+            <!-- Dấu mộc Đã Bán -->
+            <img id="sold-stamp" src="images/sold.png" class="hidden absolute top-4 -left-10 w-32 h-32 z-20 drop-shadow-lg transform -rotate-12 pointer-events-none" alt="Đã bán">
+
+            <!-- Nút đóng Panel -->
+            <button onclick="closePanel()" class="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <!-- Vùng Header Thông tin -->
+            <h2 id="unit-title" class="text-3xl font-bold mb-1 mt-6 text-white uppercase tracking-wider drop-shadow-md"></h2>
+            <div id="unit-zone" class="text-sm uppercase tracking-widest text-emerald-400 font-bold mb-6"></div>
+
+            <!-- Vùng chứa các thông số động -->
+            <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar space-y-4 relative pr-2">
+                <!-- Nội dung được Javascript tự động generate vào đây -->
+            </div>
+            
+            <!-- Nút Action -->
+            <div class="mt-6 pt-4 border-t border-white/20">
+                <button class="w-full py-3 bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold rounded-lg border border-emerald-400/50 transition-all shadow-[0_4px_15px_rgba(16,185,129,0.3)]">
+                    NHẬN BÁO GIÁ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CODE JAVASCRIPT XỬ LÝ LOGIC -->
+    <script>
+        let unitData = [];
+
+        async function loadData() {
+            try {
+                const response = await fetch('data.json'); 
+                unitData = await response.json();
+            } catch (error) {
+                console.error("Lỗi tải file data.json:", error);
+            }
+        }
+
+        function openPanel(unitId) {
+            const data = unitData.find(item => item["Mã căn"] === unitId || item.id === unitId);
+            if (!data) return;
+
+            document.getElementById('viewer-container').style.transform = "translateX(-200px)"; 
+            document.getElementById('info-panel').classList.remove('translate-x-full');
+
+            const soldStamp = document.getElementById('sold-stamp');
+            if (data["Trạng thái"] && data["Trạng thái"].toString().toLowerCase().includes("đã bán")) {
+                soldStamp.classList.remove('hidden');
+            } else {
+                soldStamp.classList.add('hidden');
+            }
+
+            document.getElementById('unit-title').innerText = data["Mã căn"] || data.id || "Đang cập nhật";
+            document.getElementById('unit-zone').innerText = data["Phân khu"] || data.zone || "";
+
+            const detailsContainer = document.getElementById('unit-details');
+            let htmlContent = '';
+
+            const excludedKeys = ['STT', 'Mã căn', 'id', 'Phân khu', 'zone', 'Trạng thái', 'images'];
+
+            // 1. Render phần Text thông số
+            for (const [key, value] of Object.entries(data)) {
+                if (excludedKeys.includes(key)) continue;
+                if (value === null || value === undefined || value.toString().trim() === "") continue;
+
+                htmlContent += `
+                    <div class="flex justify-between items-center py-2 border-b border-white/10">
+                        <span class="text-white/60 text-sm">${key}</span>
+                        <span class="font-semibold text-white text-right max-w-[65%] break-words">${value}</span>
+                    </div>
+                `;
+            }
+
+            // 2. Render phần Hình ảnh (Mặt bằng 2D tự động & Phối cảnh 3D)
+            let imagesHtml = '';
+
+            // 2.1 Tự động móc ảnh mặt bằng 2D từ thư mục thietkecan dựa vào cột "Mẫu nhà"
+            if (data["Mẫu nhà"] && data["Mẫu nhà"].toString().trim() !== "") {
+                const mauNhaCode = data["Mẫu nhà"].toString().trim();
+                // Code tự động ghép chuỗi: thư mục thietkecan + mã mẫu nhà + .png
+                imagesHtml += `<img src="images/thietkecan/${mauNhaCode}.png" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 hover:scale-[1.02] transition-transform bg-white/5" alt="Mặt bằng ${mauNhaCode}">`;
+            }
+
+            // 2.2 Đọc tiếp các ảnh diễn họa (phối cảnh) từ cột "images" (nếu có)
+            if (data.images && data.images.trim() !== "") {
+                let imageArray = typeof data.images === 'string' ? data.images.split(',') : data.images;
+                imageArray.forEach(img => {
+                    const imgName = img.trim();
+                    if (imgName) {
+                        imagesHtml += `<img src="images/${imgName}" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 hover:scale-[1.02] transition-transform" alt="Phối cảnh">`;
+                    }
+                });
+            }
+
+            // Nếu có ít nhất 1 ảnh (mặt bằng 2D hoặc 3D), hiển thị tiêu đề block
+            if (imagesHtml !== '') {
+                htmlContent += `<div class="mt-8"><h3 class="text-white/50 font-bold mb-4 uppercase text-xs tracking-widest">Mặt bằng & Phối cảnh</h3>` + imagesHtml + `</div>`;
+            }
+
+            detailsContainer.innerHTML = htmlContent;
+        }
+
+        function closePanel() {
+            document.getElementById('viewer-container').style.transform = "translateX(0)";
+            document.getElementById('info-panel').classList.add('translate-x-full');
+        }
+
+        window.addEventListener("message", (event) => {
+            try {
+                const msg = event.data;
+                if (!msg) return;
+
+                const msgStr = JSON.stringify(msg).toLowerCase();
+
+                if (msgStr.includes("click") || msgStr.includes("hotspot") || msgStr.includes("polygon")) {
+                    for (let i = 0; i < unitData.length; i++) {
+                        const unitId = unitData[i]["Mã căn"] || unitData[i]["id"];
+                        if (unitId && msgStr.includes(unitId.toLowerCase())) {
+                            openPanel(unitId);
+                            break; 
+                        }
+                    }
+                }
+            } catch (err) {}
+        });
+
+        loadData();
+    </script>
+</body>
+</html>
