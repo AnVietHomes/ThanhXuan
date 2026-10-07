@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>360 Real Estate Viewer - An Viet Homes</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Hiệu ứng Glassmorphism */
         .glass-panel {
             background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(16px);
@@ -13,15 +15,20 @@
             border-left: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: -8px 0 32px 0 rgba(31, 38, 135, 0.2);
         }
+        
+        /* Chuyển động mượt mà */
         .transition-transform {
             transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
         }
+
+        /* Ẩn thanh cuộn */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-gray-900 overflow-hidden font-sans text-gray-100">
 
+    <!-- Giao diện chính -->
     <div class="relative w-full h-screen flex">
         
         <!-- Iframe Panoee -->
@@ -30,24 +37,29 @@
                     frameborder="0" width="100%" height="100%" allowfullscreen></iframe>
         </div>
 
-        <!-- Glassmorphism Panel -->
+        <!-- Glassmorphism Panel (Bảng thông tin bên phải) -->
         <div id="info-panel" class="glass-panel absolute top-0 right-0 w-[420px] h-full p-6 flex flex-col transform translate-x-full transition-transform z-10">
             
+            <!-- Dấu mộc Đã Bán -->
             <img id="sold-stamp" src="images/sold.png" class="hidden absolute top-4 -left-10 w-32 h-32 z-20 drop-shadow-lg transform -rotate-12 pointer-events-none" alt="Đã bán">
 
+            <!-- Nút đóng -->
             <button onclick="closePanel()" class="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-30">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
 
+            <!-- Tiêu đề Căn & Phân khu -->
             <h2 id="unit-title" class="text-3xl font-bold mb-1 mt-6 text-white uppercase tracking-wider drop-shadow-md"></h2>
             <div id="unit-zone" class="text-sm uppercase tracking-widest text-emerald-400 font-bold mb-6"></div>
 
+            <!-- Vùng chứa các dòng thông số -->
             <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar space-y-4 relative pr-2">
-                <!-- Data đổ vào đây -->
+                <!-- Data đổ tự động vào đây -->
             </div>
             
+            <!-- Nút liên hệ -->
             <div class="mt-6 pt-4 border-t border-white/20">
                 <button class="w-full py-3 bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold rounded-lg border border-emerald-400/50 transition-all shadow-[0_4px_15px_rgba(16,185,129,0.3)]">
                     NHẬN BÁO GIÁ
@@ -56,69 +68,90 @@
         </div>
     </div>
 
-    <!-- CODE JAVASCRIPT XỬ LÝ LOGIC -->
+    <!-- KỊCH BẢN XỬ LÝ (JAVASCRIPT) -->
     <script>
         let unitData = [];
 
-        // HÀM ĐỌC VÀ PARSE FILE CSV (Thay thế cho JSON)
+        // HÀM CHUYÊN DỤNG ĐỂ ĐỌC DÒNG CSV (Hỗ trợ diện tích có dấu phẩy như "400,00")
+        function parseCSVRow(str) {
+            const result = [];
+            let curVal = '';
+            let inQuotes = false;
+            for (let i = 0; i < str.length; i++) {
+                if (str[i] === '"') {
+                    inQuotes = !inQuotes;
+                } else if (str[i] === ',' && !inQuotes) {
+                    result.push(curVal.trim());
+                    curVal = '';
+                } else {
+                    curVal += str[i];
+                }
+            }
+            result.push(curVal.trim());
+            return result;
+        }
+
+        // TẢI VÀ XỬ LÝ FILE data.csv
         async function loadData() {
             try {
                 const response = await fetch('data.csv'); 
-                const csvText = await response.text();
+                let csvText = await response.text();
                 
-                // Tách CSV thành từng dòng
+                // Chuẩn hóa ký tự xuống dòng
+                csvText = csvText.replace(/\r/g, '');
                 const lines = csvText.split('\n');
-                // Lấy tiêu đề cột (dòng đầu tiên)
-                const headers = lines[0].split(',').map(header => header.trim().replace(/^"|"$/g, ''));
                 
-                // Parse các dòng dữ liệu thành mảng Object (Giống dạng JSON)
+                if (lines.length < 2) return;
+
+                const headers = parseCSVRow(lines[0]);
+                
                 unitData = [];
                 for (let i = 1; i < lines.length; i++) {
-                    // Bỏ qua dòng trống
                     if (!lines[i].trim()) continue;
 
-                    // Dùng Regex để tách cột (Hỗ trợ trường hợp cột có dấu phẩy bên trong dấu ngoặc kép)
+                    const currentline = parseCSVRow(lines[i]);
                     const obj = {};
-                    const currentline = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
 
                     for (let j = 0; j < headers.length; j++) {
-                        let val = currentline[j] ? currentline[j].trim() : "";
-                        // Xóa dấu ngoặc kép bao quanh dữ liệu (nếu có)
-                        val = val.replace(/^"|"$/g, ''); 
-                        obj[headers[j]] = val;
+                        obj[headers[j]] = currentline[j] || "";
                     }
                     unitData.push(obj);
                 }
-                console.log("Đã tải dữ liệu CSV thành công:", unitData);
+                console.log("✅ Tải Data CSV thành công:", unitData);
             } catch (error) {
-                console.error("Lỗi tải file data.csv:", error);
+                console.error("❌ Lỗi tải file data.csv (Hãy chắc chắn bạn đang chạy qua Local Server hoặc Github Pages):", error);
             }
         }
 
+        // HÀM MỞ BẢNG THÔNG TIN CĂN
         function openPanel(unitId) {
             const data = unitData.find(item => item["Mã căn"] === unitId || item.id === unitId);
-            if (!data) return;
+            if (!data) {
+                console.warn("⚠️ Không tìm thấy data cho mã căn:", unitId);
+                return;
+            }
 
+            // Giao diện trượt
             document.getElementById('viewer-container').style.transform = "translateX(-200px)"; 
             document.getElementById('info-panel').classList.remove('translate-x-full');
 
+            // Xử lý hiển thị dấu mộc
             const soldStamp = document.getElementById('sold-stamp');
-            // Cột trạng thái trong CSV nếu lưu bằng Excel đôi khi có khoảng trắng
             if (data["Trạng thái"] && data["Trạng thái"].toString().toLowerCase().includes("đã bán")) {
                 soldStamp.classList.remove('hidden');
             } else {
                 soldStamp.classList.add('hidden');
             }
 
+            // Đổ text Header
             document.getElementById('unit-title').innerText = data["Mã căn"] || data.id || "Đang cập nhật";
             document.getElementById('unit-zone').innerText = data["Phân khu"] || data.zone || "";
 
             const detailsContainer = document.getElementById('unit-details');
             let htmlContent = '';
 
+            // 1. Render Thông số text (Tự động bỏ qua ô rỗng)
             const excludedKeys = ['STT', 'Mã căn', 'id', 'Phân khu', 'zone', 'Trạng thái', 'images'];
-
-            // 1. Render Text Thông số
             for (const [key, value] of Object.entries(data)) {
                 if (excludedKeys.includes(key)) continue;
                 if (value === null || value === undefined || value.toString().trim() === "") continue;
@@ -131,22 +164,22 @@
                 `;
             }
 
-            // 2. Render Hình ảnh (Mặt bằng 2D & 3D)
+            // 2. Render Hình ảnh (Mặt bằng 2D & Diễn họa 3D)
             let imagesHtml = '';
 
-            // 2.1 Móc ảnh mặt bằng 2D
+            // Lấy mặt bằng 2D từ cột "Mẫu nhà" -> images/thietkecan/[Mã].png
             if (data["Mẫu nhà"] && data["Mẫu nhà"].toString().trim() !== "") {
                 const mauNhaCode = data["Mẫu nhà"].toString().trim();
-                imagesHtml += `<img src="images/thietkecan/${mauNhaCode}.png" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 hover:scale-[1.02] transition-transform bg-white/5" alt="Mặt bằng ${mauNhaCode}">`;
+                imagesHtml += `<img src="images/thietkecan/${mauNhaCode}.png" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 hover:scale-[1.02] transition-transform bg-white/5" alt="Mặt bằng ${mauNhaCode}" onerror="this.style.display='none'">`;
             }
 
-            // 2.2 Đọc ảnh 3D từ cột "images"
+            // Lấy ảnh 3D từ cột "images"
             if (data.images && data.images.trim() !== "") {
                 let imageArray = typeof data.images === 'string' ? data.images.split(',') : data.images;
                 imageArray.forEach(img => {
                     const imgName = img.trim();
                     if (imgName) {
-                        imagesHtml += `<img src="images/${imgName}" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 hover:scale-[1.02] transition-transform" alt="Phối cảnh">`;
+                        imagesHtml += `<img src="images/${imgName}" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 hover:scale-[1.02] transition-transform" alt="Phối cảnh" onerror="this.style.display='none'">`;
                     }
                 });
             }
@@ -158,22 +191,31 @@
             detailsContainer.innerHTML = htmlContent;
         }
 
+        // HÀM ĐÓNG BẢNG
         function closePanel() {
             document.getElementById('viewer-container').style.transform = "translateX(0)";
             document.getElementById('info-panel').classList.add('translate-x-full');
         }
 
+        // LẮNG NGHE CLICK TỪ PANOEE
         window.addEventListener("message", (event) => {
             try {
                 const msg = event.data;
                 if (!msg) return;
 
+                // Debug: Xem trực tiếp Panoee đang gửi ra lệnh gì (Bấm F12 để xem)
+                console.log("🔥 Tín hiệu từ Panoee:", msg);
+
                 const msgStr = JSON.stringify(msg).toLowerCase();
 
-                if (msgStr.includes("click") || msgStr.includes("hotspot") || msgStr.includes("polygon")) {
+                // Quét xem lệnh có chứa thao tác tương tác Polygon hay không
+                if (msgStr.includes("click") || msgStr.includes("polygon") || msgStr.includes("hotspot")) {
                     for (let i = 0; i < unitData.length; i++) {
                         const unitId = unitData[i]["Mã căn"] || unitData[i]["id"];
+                        
+                        // Đối chiếu mã căn trong file CSV với tín hiệu Panoee phát ra
                         if (unitId && msgStr.includes(unitId.toLowerCase())) {
+                            console.log("🎯 Đã khớp mã căn:", unitId);
                             openPanel(unitId);
                             break; 
                         }
@@ -182,6 +224,7 @@
             } catch (err) {}
         });
 
+        // Khởi động
         loadData();
     </script>
 </body>
