@@ -3,15 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>360 Real Estate Viewer - Multi-Scene Marzipano</title>
+    <title>360 Real Estate Viewer - Photo Sphere Viewer & SVG Polygon</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Marzipano Library -->
-    <script src="https://www.marzipano.net/demos/common/marzipano.js"></script>
+    
+    <!-- Photo Sphere Viewer CSS & JS từ CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/svg-overlay-plugin/index.min.css"/>
+    
+    <script src="https://cdn.jsdelivr.net/npm/three/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/svg-overlay-plugin/index.min.js"></script>
+
     <style>
         .glass-panel {
             background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(16px);
+            backdrop-range: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-left: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: -8px 0 32px 0 rgba(31, 38, 135, 0.2);
@@ -22,42 +29,18 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Style cho nút đánh dấu căn hộ */
-        .unit-hotspot {
-            background: rgba(16, 185, 129, 0.5);
-            border: 2px solid #34d399;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            transform: translate(-50%, -50%);
-            white-space: nowrap;
-        }
-        .unit-hotspot:hover {
-            background: rgba(16, 185, 129, 0.9);
-            transform: translate(-50%, -50%) scale(1.1);
-        }
-
-        /* Style cho nút chuyển góc chụp 360 (Scene Switcher) */
-        .scene-nav-btn {
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
+        /* Style cho các ô Polygon vẽ ranh giới căn hộ */
+        .custom-polygon {
+            fill: rgba(16, 185, 129, 0.3); /* Màu xanh ngọc mờ khi bình thường */
+            stroke: #34d399;              /* Viền sáng */
+            stroke-width: 2px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        .scene-nav-btn:hover, .scene-nav-btn.active {
-            background: rgba(16, 185, 129, 0.8);
-            border-color: #34d399;
+        .custom-polygon:hover {
+            fill: rgba(16, 185, 129, 0.7); /* Sáng lên khi rê chuột vào */
+            stroke: #ffffff;
+            stroke-width: 3px;
         }
     </style>
 </head>
@@ -65,17 +48,12 @@
 
     <div class="relative w-full h-screen flex">
         
-        <!-- Khung chứa ảnh 360 Marzipano -->
-        <div id="pano-container" class="w-full h-full transition-transform transform translate-x-0 relative z-0 bg-black"></div>
+        <!-- Khung chứa ảnh 360 Photo Sphere Viewer -->
+        <div id="viewer" class="w-full h-full transition-transform transform translate-x-0 relative z-0 bg-black"></div>
 
-        <!-- Thanh menu chuyển đổi giữa các góc chụp 360 (Đặt ở góc dưới màn hình) -->
-        <div id="scene-switcher" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20">
-            <!-- Các nút chuyển scene sẽ được render tự động bằng Javascript -->
-        </div>
-
-        <!-- Công cụ hỗ trợ lấy tọa độ (Góc trên bên trái) -->
-        <div id="coord-helper" class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-lg text-xs z-20 text-emerald-300 pointer-events-none">
-            Click vào ảnh 360 để lấy tọa độ Yaw/Pitch
+        <!-- Công cụ hỗ trợ hướng dẫn trên màn hình -->
+        <div class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-lg text-xs z-20 text-emerald-300 pointer-events-none">
+            💡 Click vào các ô đa giác trên ảnh để xem thông tin chi tiết căn hộ
         </div>
 
         <!-- Glassmorphism Panel (Bảng thông tin bên phải) -->
@@ -109,44 +87,12 @@
         </div>
     </div>
 
-    <!-- SCRIPT QUẢN LÝ ĐA GÓC CHỤP & MARZIPANO -->
+    <!-- SCRIPT XỬ LÝ PHOTO SPHERE VIEWER & SVG POLYGON -->
     <script>
         let unitData = [];
-        let viewer;
-        let scenes = {}; // Lưu trữ danh sách các scene 360
+        let psv;
 
-        // 1. Cấu hình danh sách các góc ảnh 360 (Scenes) của bạn
-        // Bạn có thể thêm bao nhiêu góc tùy thích bằng cách khai báo thêm ở đây:
-        const sceneConfig = [
-            {
-                id: "tong-the",
-                name: "📍 Tổng thể dự án",
-                image: "images/VP1.jpg",
-                // Danh sách các căn xuất hiện ở góc nhìn này và tọa độ tương ứng
-                hotspots: [
-                    { id: "LA01-01", yaw: 0.15, pitch: -0.05 },
-                    { id: "LA01-22", yaw: 0.35, pitch: -0.08 }
-                ]
-            },
-            {
-                id: "cong-chinh",
-                name: "🚪 Khu vực Cổng chính",
-                image: "images/scene-cong-chinh.jpg",
-                hotspots: [
-                    { id: "LA01-34", yaw: -0.20, pitch: 0.02 }
-                ]
-            },
-            {
-                id: "cong-vien",
-                name: "🌳 Công viên trung tâm",
-                image: "images/scene-cong-vien.jpg",
-                hotspots: [
-                    // Các căn nhìn thấy từ góc công viên
-                ]
-            }
-        ];
-
-        // 2. Đọc file CSV
+        // 1. Đọc file CSV
         function parseCSVRow(str) {
             const result = [];
             let curVal = '';
@@ -165,7 +111,7 @@
             return result;
         }
 
-        async function loadDataAndInitPano() {
+        async function loadDataAndInitViewer() {
             try {
                 const response = await fetch('data.csv'); 
                 let csvText = await response.text();
@@ -190,80 +136,74 @@
                 console.error("❌ Lỗi tải file data.csv:", error);
             }
 
-            initMultiSceneMarzipano();
+            initPhotoSphereViewer();
         }
 
-        // 3. Khởi tạo hệ thống Multi-Scene Marzipano
-        function initMultiSceneMarzipano() {
-            const panoElement = document.getElementById('pano-container');
-            viewer = new Marzipano.Viewer(panoElement);
+        // 2. Khởi tạo Photo Sphere Viewer
+        function initPhotoSphereViewer() {
+            psv = new PhotoSphereViewer.Viewer({
+                container: document.querySelector('#viewer'),
+                panorama: 'images/panorama.jpg', // Thay đường dẫn ảnh 360 của bạn vào đây
+                autorotateSpeed: '2rpm',
+                plugins: [
+                    PhotoSphereViewer.SvgOverlayPlugin,
+                ],
+            });
 
-            const limiter = Marzipano.RectilinearView.limit.traditional(4000, 100*Math.PI/180);
-            const switcherContainer = document.getElementById('scene-switcher');
+            psv.addEventListener('ready', () => {
+                const svgPlugin = psv.getPlugin(PhotoSphereViewer.SvgOverlayPlugin);
+                
+                // VẼ CÁC POLYGON Ô ĐẤT CĂN HỘ TRÊN ẢNH 360
+                // Photo Sphere Viewer sử dụng hệ tọa độ góc (yaw, pitch) hoặc tọa độ vector để tạo đa giác SVG ôm trọn lô đất.
+                // Dưới đây là cấu trúc mẫu định nghĩa các điểm nối của đa giác cho từng căn hộ:
+                const polygonsData = [
+                    {
+                        id: "LA01-01",
+                        // Mảng các điểm tọa độ (yaw, pitch) tạo thành hình khối bao quanh căn biệt thự
+                        // Bạn có thể dễ dàng căn chỉnh các tọa độ này cho khớp với ô đất thực tế
+                        points: [
+                            { yaw: 0.10, pitch: -0.02 },
+                            { yaw: 0.15, pitch: -0.02 },
+                            { yaw: 0.15, pitch: -0.06 },
+                            { yaw: 0.10, pitch: -0.06 }
+                        ]
+                    },
+                    {
+                        id: "LA01-22",
+                        points: [
+                            { yaw: 0.20, pitch: -0.03 },
+                            { yaw: 0.25, pitch: -0.03 },
+                            { yaw: 0.25, pitch: -0.07 },
+                            { yaw: 0.20, pitch: -0.07 }
+                        ]
+                    }
+                ];
 
-            sceneConfig.forEach((config, index) => {
-                const source = Marzipano.ImageUrlSource.fromSingleSource(config.image);
-                const geometry = new Marzipano.EquirectangularGeometry([{ width: 4000 }]);
-                const view = new Marzipano.RectilinearView({ yaw: 0, pitch: 0, fov: Math.PI/2 }, limiter);
-
-                const scene = viewer.createScene({
-                    source: source,
-                    geometry: geometry,
-                    view: view,
-                    pinches: { enabled: true }
-                });
-
-                scenes[config.id] = scene;
-
-                // Render Hotspots cho từng scene
-                const hotspotContainer = scene.hotspotContainer();
-                config.hotspots.forEach(item => {
-                    const el = document.createElement('div');
-                    el.className = 'unit-hotspot';
-                    el.innerHTML = `🏠 ${item.id}`;
-                    
-                    el.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        openPanel(item.id);
+                polygonsData.forEach(item => {
+                    // Tạo phần tử polygon SVG
+                    const polygon = svgPlugin.createPolygon({
+                        id: item.id,
+                        points: item.points,
+                        svgStyle: {
+                            className: 'custom-polygon'
+                        },
+                        tooltip: `Căn hộ: ${item.id}`
                     });
 
-                    hotspotContainer.createHotspot(el, { yaw: item.yaw, pitch: item.pitch });
+                    // Lắng nghe sự kiện click vào ô đa giác ranh giới ô đất
+                    polygon.addEventListener('click', () => {
+                        openPanel(item.id);
+                    });
                 });
-
-                // Tạo nút chuyển góc chụp trên thanh menu
-                const btn = document.createElement('button');
-                btn.className = `scene-nav-btn ${index === 0 ? 'active' : ''}`;
-                btn.innerText = config.name;
-                btn.onclick = () => {
-                    scene.switchTo({ transition: { duration: 1000 } });
-                    // Cập nhật trạng thái active cho nút
-                    document.querySelectorAll('.scene-nav-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                };
-                switcherContainer.appendChild(btn);
-
-                // Mặc định hiển thị scene đầu tiên
-                if (index === 0) {
-                    scene.switchTo();
-                }
-            });
-
-            // Lấy tọa độ khi click
-            panoElement.addEventListener('click', (e) => {
-                // Chỉ lấy tọa độ nếu click trực tiếp vào nền pano (tránh click nhầm hotspot)
-                if(e.target.classList.contains('unit-hotspot')) return;
-                
-                // Lấy view của scene đang active hiện tại
-                // (Mặc định Marzipano hỗ trợ lấy view qua active scene)
             });
         }
 
-        // 4. Mở Panel thông tin căn
+        // 3. Mở Panel hiển thị thông tin căn
         function openPanel(unitId) {
             const data = unitData.find(item => item["Mã căn"] === unitId || item.id === unitId);
             if (!data) return;
 
-            document.getElementById('pano-container').style.transform = "translateX(-200px)"; 
+            document.getElementById('viewer').style.transform = "translateX(-200px)"; 
             document.getElementById('info-panel').classList.remove('translate-x-full');
 
             const soldStamp = document.getElementById('sold-stamp');
@@ -315,13 +255,13 @@
             detailsContainer.innerHTML = htmlContent;
         }
 
-        // 5. Đóng Panel
+        // 4. Đóng Panel
         function closePanel() {
-            document.getElementById('pano-container').style.transform = "translateX(0)";
+            document.getElementById('viewer').style.transform = "translateX(0)";
             document.getElementById('info-panel').classList.add('translate-x-full');
         }
 
-        loadDataAndInitPano();
+        loadDataAndInitViewer();
     </script>
 </body>
 </html>
