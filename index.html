@@ -7,7 +7,6 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Hiệu ứng Glassmorphism */
         .glass-panel {
             background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(16px);
@@ -15,51 +14,42 @@
             border-left: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: -8px 0 32px 0 rgba(31, 38, 135, 0.2);
         }
-        
-        /* Chuyển động mượt mà */
         .transition-transform {
             transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
         }
-
-        /* Ẩn thanh cuộn */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-gray-900 overflow-hidden font-sans text-gray-100">
 
-    <!-- Giao diện chính -->
     <div class="relative w-full h-screen flex">
         
-<!-- Iframe Panoee -->
+        <!-- Iframe Panoee -->
         <div id="viewer-container" class="w-full h-full transition-transform transform translate-x-0 relative z-0 bg-black">
+            <!-- Đã đổi link thành iframe -->
             <iframe id="pano-iframe" src="https://tour.panoee.net/iframe/6ac5cdafbbd7eb16f960f542" 
                     frameborder="0" width="100%" height="100%" allowfullscreen></iframe>
         </div>
 
-        <!-- Glassmorphism Panel (Bảng thông tin bên phải) -->
+        <!-- Glassmorphism Panel -->
         <div id="info-panel" class="glass-panel absolute top-0 right-0 w-[420px] h-full p-6 flex flex-col transform translate-x-full transition-transform z-10">
             
-            <!-- Dấu mộc Đã Bán -->
             <img id="sold-stamp" src="images/sold.png" class="hidden absolute top-4 -left-10 w-32 h-32 z-20 drop-shadow-lg transform -rotate-12 pointer-events-none" alt="Đã bán">
 
-            <!-- Nút đóng -->
             <button onclick="closePanel()" class="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-30">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
 
-            <!-- Tiêu đề Căn & Phân khu -->
             <h2 id="unit-title" class="text-3xl font-bold mb-1 mt-6 text-white uppercase tracking-wider drop-shadow-md"></h2>
             <div id="unit-zone" class="text-sm uppercase tracking-widest text-emerald-400 font-bold mb-6"></div>
 
-            <!-- Vùng chứa các dòng thông số -->
             <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar space-y-4 relative pr-2">
                 <!-- Data đổ tự động vào đây -->
             </div>
             
-            <!-- Nút liên hệ -->
             <div class="mt-6 pt-4 border-t border-white/20">
                 <button class="w-full py-3 bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold rounded-lg border border-emerald-400/50 transition-all shadow-[0_4px_15px_rgba(16,185,129,0.3)]">
                     NHẬN BÁO GIÁ
@@ -68,11 +58,12 @@
         </div>
     </div>
 
-    <!-- KỊCH BẢN XỬ LÝ (JAVASCRIPT) -->
+    <!-- JAVASCRIPT -->
     <script>
         let unitData = [];
+        let lastHash = ""; // Lưu lại hash cũ để kiểm tra thay đổi
 
-        // HÀM CHUYÊN DỤNG ĐỂ ĐỌC DÒNG CSV (Hỗ trợ diện tích có dấu phẩy như "400,00")
+        // ĐỌC CSV
         function parseCSVRow(str) {
             const result = [];
             let curVal = '';
@@ -91,39 +82,34 @@
             return result;
         }
 
-        // TẢI VÀ XỬ LÝ FILE data.csv
         async function loadData() {
             try {
                 const response = await fetch('data.csv'); 
                 let csvText = await response.text();
                 
-                // Chuẩn hóa ký tự xuống dòng
                 csvText = csvText.replace(/\r/g, '');
                 const lines = csvText.split('\n');
                 
                 if (lines.length < 2) return;
-
                 const headers = parseCSVRow(lines[0]);
                 
                 unitData = [];
                 for (let i = 1; i < lines.length; i++) {
                     if (!lines[i].trim()) continue;
-
                     const currentline = parseCSVRow(lines[i]);
                     const obj = {};
-
                     for (let j = 0; j < headers.length; j++) {
                         obj[headers[j]] = currentline[j] || "";
                     }
                     unitData.push(obj);
                 }
-                console.log("✅ Tải Data CSV thành công:", unitData);
+                console.log("✅ Tải Data CSV thành công");
             } catch (error) {
-                console.error("❌ Lỗi tải file data.csv (Hãy chắc chắn bạn đang chạy qua Local Server hoặc Github Pages):", error);
+                console.error("❌ Lỗi tải CSV:", error);
             }
         }
 
-        // HÀM MỞ BẢNG THÔNG TIN CĂN
+        // MỞ BẢNG
         function openPanel(unitId) {
             const data = unitData.find(item => item["Mã căn"] === unitId || item.id === unitId);
             if (!data) {
@@ -131,11 +117,9 @@
                 return;
             }
 
-            // Giao diện trượt
             document.getElementById('viewer-container').style.transform = "translateX(-200px)"; 
             document.getElementById('info-panel').classList.remove('translate-x-full');
 
-            // Xử lý hiển thị dấu mộc
             const soldStamp = document.getElementById('sold-stamp');
             if (data["Trạng thái"] && data["Trạng thái"].toString().toLowerCase().includes("đã bán")) {
                 soldStamp.classList.remove('hidden');
@@ -143,14 +127,12 @@
                 soldStamp.classList.add('hidden');
             }
 
-            // Đổ text Header
             document.getElementById('unit-title').innerText = data["Mã căn"] || data.id || "Đang cập nhật";
             document.getElementById('unit-zone').innerText = data["Phân khu"] || data.zone || "";
 
             const detailsContainer = document.getElementById('unit-details');
             let htmlContent = '';
 
-            // 1. Render Thông số text (Tự động bỏ qua ô rỗng)
             const excludedKeys = ['STT', 'Mã căn', 'id', 'Phân khu', 'zone', 'Trạng thái', 'images'];
             for (const [key, value] of Object.entries(data)) {
                 if (excludedKeys.includes(key)) continue;
@@ -164,16 +146,11 @@
                 `;
             }
 
-            // 2. Render Hình ảnh (Mặt bằng 2D & Diễn họa 3D)
             let imagesHtml = '';
-
-            // Lấy mặt bằng 2D từ cột "Mẫu nhà" -> images/thietkecan/[Mã].png
             if (data["Mẫu nhà"] && data["Mẫu nhà"].toString().trim() !== "") {
                 const mauNhaCode = data["Mẫu nhà"].toString().trim();
                 imagesHtml += `<img src="images/thietkecan/${mauNhaCode}.png" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 hover:scale-[1.02] transition-transform bg-white/5" alt="Mặt bằng ${mauNhaCode}" onerror="this.style.display='none'">`;
             }
-
-            // Lấy ảnh 3D từ cột "images"
             if (data.images && data.images.trim() !== "") {
                 let imageArray = typeof data.images === 'string' ? data.images.split(',') : data.images;
                 imageArray.forEach(img => {
@@ -191,31 +168,42 @@
             detailsContainer.innerHTML = htmlContent;
         }
 
-        // HÀM ĐÓNG BẢNG
+        // ĐÓNG BẢNG
         function closePanel() {
             document.getElementById('viewer-container').style.transform = "translateX(0)";
             document.getElementById('info-panel').classList.add('translate-x-full');
+            // Reset hash để có thể click lại chính căn đó
+            window.location.hash = "";
         }
 
-        // LẮNG NGHE CLICK TỪ PANOEE
+        // PHƯƠNG ÁN C: BẮT SỰ KIỆN HASH URL
+        // Panoee (nằm trong iframe) không thay đổi url trình duyệt chính, nhưng nó phát tín hiệu ra ngoài khi URL của nó đổi
         window.addEventListener("message", (event) => {
             try {
+                // Kiểm tra xem Panoee có gửi sự kiện thay đổi hash/scene không
+                if (typeof event.data === 'string' && event.data.includes('panoee')) {
+                     // Một số tour Panoee cũ đẩy data dạng string
+                } else if (event.data && event.data.type === 'PANOEE_EVENT') {
+                    // Xử lý sự kiện nếu có
+                }
+            } catch(e) {}
+        });
+
+        // BẮT SỰ KIỆN QUA POSTMESSAGE (CẬP NHẬT TỪ PANOEE IFRAME EVENT)
+        // Khi Panoee gắn Link dạng URL (ví dụ #LA01-01), nó có thể bắn ra window message
+        window.addEventListener("message", (event) => {
+            try {
+                // Nhiều nền tảng 360 truyền qua payload có chứa thuộc tính hash hoặc url
                 const msg = event.data;
-                if (!msg) return;
+                const msgStr = JSON.stringify(msg);
 
-                // Debug: Xem trực tiếp Panoee đang gửi ra lệnh gì (Bấm F12 để xem)
-                console.log("🔥 Tín hiệu từ Panoee:", msg);
-
-                const msgStr = JSON.stringify(msg).toLowerCase();
-
-                // Quét xem lệnh có chứa thao tác tương tác Polygon hay không
-                if (msgStr.includes("click") || msgStr.includes("polygon") || msgStr.includes("hotspot")) {
-                    for (let i = 0; i < unitData.length; i++) {
+                // Thử tìm mã căn trong chuỗi message
+                if(unitData.length > 0) {
+                     for (let i = 0; i < unitData.length; i++) {
                         const unitId = unitData[i]["Mã căn"] || unitData[i]["id"];
-                        
-                        // Đối chiếu mã căn trong file CSV với tín hiệu Panoee phát ra
-                        if (unitId && msgStr.includes(unitId.toLowerCase())) {
-                            console.log("🎯 Đã khớp mã căn:", unitId);
+                        // Quét xem trong data Panoee gửi ra có chứa đoạn "#LA01-01" không
+                        if (unitId && msgStr.includes("#" + unitId)) {
+                            console.log("🎯 Bắt được mã qua Hash Message:", unitId);
                             openPanel(unitId);
                             break; 
                         }
@@ -223,7 +211,7 @@
                 }
             } catch (err) {}
         });
-
+        
         // Khởi động
         loadData();
     </script>
