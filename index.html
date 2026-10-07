@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>360 Real Estate Viewer - An Viet Homes</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .glass-panel {
@@ -25,14 +24,11 @@
 
     <div class="relative w-full h-screen flex">
         
-        <!-- Iframe Panoee -->
         <div id="viewer-container" class="w-full h-full transition-transform transform translate-x-0 relative z-0 bg-black">
-            <!-- Đã đổi link thành iframe -->
             <iframe id="pano-iframe" src="https://tour.panoee.net/iframe/6ac5cdafbbd7eb16f960f542" 
                     frameborder="0" width="100%" height="100%" allowfullscreen></iframe>
         </div>
 
-        <!-- Glassmorphism Panel -->
         <div id="info-panel" class="glass-panel absolute top-0 right-0 w-[420px] h-full p-6 flex flex-col transform translate-x-full transition-transform z-10">
             
             <img id="sold-stamp" src="images/sold.png" class="hidden absolute top-4 -left-10 w-32 h-32 z-20 drop-shadow-lg transform -rotate-12 pointer-events-none" alt="Đã bán">
@@ -58,12 +54,9 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT -->
     <script>
         let unitData = [];
-        let lastHash = ""; // Lưu lại hash cũ để kiểm tra thay đổi
 
-        // ĐỌC CSV
         function parseCSVRow(str) {
             const result = [];
             let curVal = '';
@@ -89,11 +82,11 @@
                 
                 csvText = csvText.replace(/\r/g, '');
                 const lines = csvText.split('\n');
-                
                 if (lines.length < 2) return;
-                const headers = parseCSVRow(lines[0]);
                 
+                const headers = parseCSVRow(lines[0]);
                 unitData = [];
+                
                 for (let i = 1; i < lines.length; i++) {
                     if (!lines[i].trim()) continue;
                     const currentline = parseCSVRow(lines[i]);
@@ -103,19 +96,25 @@
                     }
                     unitData.push(obj);
                 }
+                
                 console.log("✅ Tải Data CSV thành công");
+
+                // KIỂM TRA DEEP LINK (Tự động mở căn nếu URL có chứa ?unit=Mã-Căn)
+                const urlParams = new URLSearchParams(window.location.search);
+                const targetUnit = urlParams.get('unit');
+                if (targetUnit) {
+                    // Đợi iframe load xong để hiệu ứng mượt hơn
+                    setTimeout(() => openPanel(targetUnit), 1000);
+                }
+
             } catch (error) {
-                console.error("❌ Lỗi tải CSV:", error);
+                console.error("❌ Lỗi tải file data.csv:", error);
             }
         }
 
-        // MỞ BẢNG
         function openPanel(unitId) {
-            const data = unitData.find(item => item["Mã căn"] === unitId || item.id === unitId);
-            if (!data) {
-                console.warn("⚠️ Không tìm thấy data cho mã căn:", unitId);
-                return;
-            }
+            const data = unitData.find(item => item["Mã căn"].toLowerCase() === unitId.toLowerCase() || (item.id && item.id.toLowerCase() === unitId.toLowerCase()));
+            if (!data) return;
 
             document.getElementById('viewer-container').style.transform = "translateX(-200px)"; 
             document.getElementById('info-panel').classList.remove('translate-x-full');
@@ -132,12 +131,11 @@
 
             const detailsContainer = document.getElementById('unit-details');
             let htmlContent = '';
-
             const excludedKeys = ['STT', 'Mã căn', 'id', 'Phân khu', 'zone', 'Trạng thái', 'images'];
+
             for (const [key, value] of Object.entries(data)) {
                 if (excludedKeys.includes(key)) continue;
                 if (value === null || value === undefined || value.toString().trim() === "") continue;
-
                 htmlContent += `
                     <div class="flex justify-between items-center py-2 border-b border-white/10">
                         <span class="text-white/60 text-sm">${key}</span>
@@ -151,6 +149,7 @@
                 const mauNhaCode = data["Mẫu nhà"].toString().trim();
                 imagesHtml += `<img src="images/thietkecan/${mauNhaCode}.png" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 hover:scale-[1.02] transition-transform bg-white/5" alt="Mặt bằng ${mauNhaCode}" onerror="this.style.display='none'">`;
             }
+
             if (data.images && data.images.trim() !== "") {
                 let imageArray = typeof data.images === 'string' ? data.images.split(',') : data.images;
                 imageArray.forEach(img => {
@@ -168,51 +167,42 @@
             detailsContainer.innerHTML = htmlContent;
         }
 
-        // ĐÓNG BẢNG
         function closePanel() {
             document.getElementById('viewer-container').style.transform = "translateX(0)";
             document.getElementById('info-panel').classList.add('translate-x-full');
-            // Reset hash để có thể click lại chính căn đó
-            window.location.hash = "";
+            
+            // Xóa tham số trên URL để làm sạch Link nếu người dùng muốn copy Link gửi đi
+            if (window.history.replaceState) {
+                const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+            }
         }
 
-        // PHƯƠNG ÁN C: BẮT SỰ KIỆN HASH URL
-        // Panoee (nằm trong iframe) không thay đổi url trình duyệt chính, nhưng nó phát tín hiệu ra ngoài khi URL của nó đổi
+        // BỘ BẮT TÍN HIỆU TỪ PANOEE KHI CHẠY LỆNH JAVASCRIPT
         window.addEventListener("message", (event) => {
             try {
-                // Kiểm tra xem Panoee có gửi sự kiện thay đổi hash/scene không
-                if (typeof event.data === 'string' && event.data.includes('panoee')) {
-                     // Một số tour Panoee cũ đẩy data dạng string
-                } else if (event.data && event.data.type === 'PANOEE_EVENT') {
-                    // Xử lý sự kiện nếu có
+                if (!event.data) return;
+                
+                // Trích xuất mã căn từ tín hiệu (Chấp nhận cả String ngắn hoặc Object)
+                let receivedId = "";
+                if (typeof event.data === 'string') {
+                    receivedId = event.data.trim();
+                } else if (event.data.unitId) {
+                    receivedId = event.data.unitId;
+                } else {
+                    return; 
                 }
-            } catch(e) {}
-        });
 
-        // BẮT SỰ KIỆN QUA POSTMESSAGE (CẬP NHẬT TỪ PANOEE IFRAME EVENT)
-        // Khi Panoee gắn Link dạng URL (ví dụ #LA01-01), nó có thể bắn ra window message
-        window.addEventListener("message", (event) => {
-            try {
-                // Nhiều nền tảng 360 truyền qua payload có chứa thuộc tính hash hoặc url
-                const msg = event.data;
-                const msgStr = JSON.stringify(msg);
-
-                // Thử tìm mã căn trong chuỗi message
-                if(unitData.length > 0) {
-                     for (let i = 0; i < unitData.length; i++) {
-                        const unitId = unitData[i]["Mã căn"] || unitData[i]["id"];
-                        // Quét xem trong data Panoee gửi ra có chứa đoạn "#LA01-01" không
-                        if (unitId && msgStr.includes("#" + unitId)) {
-                            console.log("🎯 Bắt được mã qua Hash Message:", unitId);
-                            openPanel(unitId);
-                            break; 
-                        }
+                for (let i = 0; i < unitData.length; i++) {
+                    const unitId = unitData[i]["Mã căn"] || unitData[i]["id"];
+                    if (unitId && receivedId.toLowerCase() === unitId.toLowerCase()) {
+                        openPanel(unitId);
+                        break; 
                     }
                 }
             } catch (err) {}
         });
-        
-        // Khởi động
+
         loadData();
     </script>
 </body>
