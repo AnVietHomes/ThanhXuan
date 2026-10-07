@@ -3,22 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>360 Real Estate Viewer - Photo Sphere Viewer & SVG Polygon</title>
+    <title>360 Real Estate Viewer - An Viet Homes</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Photo Sphere Viewer CSS & JS từ CDN -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/svg-overlay-plugin/index.min.css"/>
-    
-    <script src="https://cdn.jsdelivr.net/npm/three/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/svg-overlay-plugin/index.min.js"></script>
-
     <style>
         .glass-panel {
             background: rgba(255, 255, 255, 0.15);
-            backdrop-range: blur(16px);
+            backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-left: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: -8px 0 32px 0 rgba(31, 38, 135, 0.2);
@@ -28,42 +19,26 @@
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* Style cho các ô Polygon vẽ ranh giới căn hộ */
-        .custom-polygon {
-            fill: rgba(16, 185, 129, 0.3); /* Màu xanh ngọc mờ khi bình thường */
-            stroke: #34d399;              /* Viền sáng */
-            stroke-width: 2px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .custom-polygon:hover {
-            fill: rgba(16, 185, 129, 0.7); /* Sáng lên khi rê chuột vào */
-            stroke: #ffffff;
-            stroke-width: 3px;
-        }
     </style>
 </head>
 <body class="bg-gray-900 overflow-hidden font-sans text-gray-100">
 
     <div class="relative w-full h-screen flex">
         
-        <!-- Khung chứa ảnh 360 Photo Sphere Viewer -->
-        <div id="viewer" class="w-full h-full transition-transform transform translate-x-0 relative z-0 bg-black"></div>
-
-        <!-- Công cụ hỗ trợ hướng dẫn trên màn hình -->
-        <div class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-lg text-xs z-20 text-emerald-300 pointer-events-none">
-            💡 Click vào các ô đa giác trên ảnh để xem thông tin chi tiết căn hộ
+        <!-- Iframe Panoee -->
+        <div id="viewer-container" class="w-full h-full transition-transform transform translate-x-0 relative z-0 bg-black">
+            <iframe id="pano-iframe" src="https://tour.panoee.net/iframe/6ac5cdafbbd7eb16f960f542" 
+                    frameborder="0" width="100%" height="100%" allowfullscreen></iframe>
         </div>
 
         <!-- Glassmorphism Panel (Bảng thông tin bên phải) -->
-        <div id="info-panel" class="glass-panel absolute top-0 right-0 w-[420px] h-full p-6 flex flex-col transform translate-x-full transition-transform z-30">
+        <div id="info-panel" class="glass-panel absolute top-0 right-0 w-[420px] h-full p-6 flex flex-col transform translate-x-full transition-transform z-10">
             
             <!-- Dấu mộc Đã Bán -->
-            <img id="sold-stamp" src="images/sold.png" class="hidden absolute top-4 -left-10 w-32 h-32 z-40 drop-shadow-lg transform -rotate-12 pointer-events-none" alt="Đã bán">
+            <img id="sold-stamp" src="images/sold.png" class="hidden absolute top-4 -left-10 w-32 h-32 z-20 drop-shadow-lg transform -rotate-12 pointer-events-none" alt="Đã bán">
 
             <!-- Nút đóng -->
-            <button onclick="closePanel()" class="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-50">
+            <button onclick="closePanel()" class="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-30">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -87,12 +62,10 @@
         </div>
     </div>
 
-    <!-- SCRIPT XỬ LÝ PHOTO SPHERE VIEWER & SVG POLYGON -->
+    <!-- JAVASCRIPT XỬ LÝ -->
     <script>
         let unitData = [];
-        let psv;
 
-        // 1. Đọc file CSV
         function parseCSVRow(str) {
             const result = [];
             let curVal = '';
@@ -111,99 +84,37 @@
             return result;
         }
 
-        async function loadDataAndInitViewer() {
+        async function loadData() {
             try {
                 const response = await fetch('data.csv'); 
                 let csvText = await response.text();
                 csvText = csvText.replace(/\r/g, '');
                 const lines = csvText.split('\n');
                 
-                if (lines.length >= 2) {
-                    const headers = parseCSVRow(lines[0]);
-                    unitData = [];
-                    for (let i = 1; i < lines.length; i++) {
-                        if (!lines[i].trim()) continue;
-                        const currentline = parseCSVRow(lines[i]);
-                        const obj = {};
-                        for (let j = 0; j < headers.length; j++) {
-                            obj[headers[j]] = currentline[j] || "";
-                        }
-                        unitData.push(obj);
-                    }
-                    console.log("✅ Tải Data CSV thành công");
-                }
-            } catch (error) {
-                console.error("❌ Lỗi tải file data.csv:", error);
-            }
-
-            initPhotoSphereViewer();
-        }
-
-        // 2. Khởi tạo Photo Sphere Viewer
-        function initPhotoSphereViewer() {
-            psv = new PhotoSphereViewer.Viewer({
-                container: document.querySelector('#viewer'),
-                panorama: 'images/panorama.jpg', // Thay đường dẫn ảnh 360 của bạn vào đây
-                autorotateSpeed: '2rpm',
-                plugins: [
-                    PhotoSphereViewer.SvgOverlayPlugin,
-                ],
-            });
-
-            psv.addEventListener('ready', () => {
-                const svgPlugin = psv.getPlugin(PhotoSphereViewer.SvgOverlayPlugin);
+                if (lines.length < 2) return;
+                const headers = parseCSVRow(lines[0]);
+                unitData = [];
                 
-                // VẼ CÁC POLYGON Ô ĐẤT CĂN HỘ TRÊN ẢNH 360
-                // Photo Sphere Viewer sử dụng hệ tọa độ góc (yaw, pitch) hoặc tọa độ vector để tạo đa giác SVG ôm trọn lô đất.
-                // Dưới đây là cấu trúc mẫu định nghĩa các điểm nối của đa giác cho từng căn hộ:
-                const polygonsData = [
-                    {
-                        id: "LA01-01",
-                        // Mảng các điểm tọa độ (yaw, pitch) tạo thành hình khối bao quanh căn biệt thự
-                        // Bạn có thể dễ dàng căn chỉnh các tọa độ này cho khớp với ô đất thực tế
-                        points: [
-                            { yaw: 0.10, pitch: -0.02 },
-                            { yaw: 0.15, pitch: -0.02 },
-                            { yaw: 0.15, pitch: -0.06 },
-                            { yaw: 0.10, pitch: -0.06 }
-                        ]
-                    },
-                    {
-                        id: "LA01-22",
-                        points: [
-                            { yaw: 0.20, pitch: -0.03 },
-                            { yaw: 0.25, pitch: -0.03 },
-                            { yaw: 0.25, pitch: -0.07 },
-                            { yaw: 0.20, pitch: -0.07 }
-                        ]
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i].trim()) continue;
+                    const currentline = parseCSVRow(lines[i]);
+                    const obj = {};
+                    for (let j = 0; j < headers.length; j++) {
+                        obj[headers[j]] = currentline[j] || "";
                     }
-                ];
-
-                polygonsData.forEach(item => {
-                    // Tạo phần tử polygon SVG
-                    const polygon = svgPlugin.createPolygon({
-                        id: item.id,
-                        points: item.points,
-                        svgStyle: {
-                            className: 'custom-polygon'
-                        },
-                        tooltip: `Căn hộ: ${item.id}`
-                    });
-
-                    // Lắng nghe sự kiện click vào ô đa giác ranh giới ô đất
-                    polygon.addEventListener('click', () => {
-                        openPanel(item.id);
-                    });
-                });
-            });
+                    unitData.push(obj);
+                }
+                console.log("✅ Tải Data CSV thành công");
+            } catch (error) {
+                console.error("❌ Lỗi tải CSV:", error);
+            }
         }
 
-        // 3. Mở Panel hiển thị thông tin căn
         function openPanel(unitId) {
             const data = unitData.find(item => item["Mã căn"] === unitId || item.id === unitId);
             if (!data) return;
 
-            document.getElementById('viewer').style.transform = "translateX(-200px)"; 
+            document.getElementById('viewer-container').style.transform = "translateX(-200px)"; 
             document.getElementById('info-panel').classList.remove('translate-x-full');
 
             const soldStamp = document.getElementById('sold-stamp');
@@ -255,13 +166,22 @@
             detailsContainer.innerHTML = htmlContent;
         }
 
-        // 4. Đóng Panel
         function closePanel() {
-            document.getElementById('viewer').style.transform = "translateX(0)";
+            document.getElementById('viewer-container').style.transform = "translateX(0)";
             document.getElementById('info-panel').classList.add('translate-x-full');
         }
 
-        loadDataAndInitViewer();
+        // LẮNG NGHE TÍN HIỆU TỪ CẦU NỐI BRIDGE.HTML
+        window.addEventListener("message", (event) => {
+            try {
+                const msg = event.data;
+                if (msg && msg.type === "OPEN_UNIT" && msg.unitId) {
+                    openPanel(msg.unitId);
+                }
+            } catch (err) {}
+        });
+
+        loadData();
     </script>
 </body>
 </html>
