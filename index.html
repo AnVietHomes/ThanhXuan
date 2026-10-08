@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>360 Multi-Scene Real Estate - An Viet Homes</title>
+    <title>360 Real Estate Viewer - An Viet Homes</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Photo Sphere Viewer & Markers -->
@@ -25,43 +26,50 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Nút chuyển góc cam */
+        /* Giao diện nút chuyển góc cam */
         .scene-btn {
             background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
             border: 1px solid rgba(255,255,255,0.2); color: white;
-            padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: 0.3s;
+            padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: 0.3s;
+            font-weight: 500; font-size: 14px;
         }
-        .scene-btn.active { background: rgba(16, 185, 129, 0.8); border-color: #34d399; font-weight: bold; }
+        .scene-btn:hover { background: rgba(16, 185, 129, 0.5); }
+        .scene-btn.active { background: rgba(16, 185, 129, 0.9); border-color: #34d399; font-weight: bold; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
     </style>
 </head>
 <body class="bg-gray-900 overflow-hidden font-sans text-gray-100">
 
     <div class="relative w-full h-screen flex">
         
-        <!-- Viewer 360 -->
+        <!-- Khung hiển thị 360 -->
         <div id="viewer" class="w-full h-full transition-transform transform translate-x-0 relative z-0 bg-black"></div>
 
-        <!-- Hướng dẫn -->
-        <div class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-lg text-xs z-20 text-emerald-300 pointer-events-none shadow-md">
+        <!-- Hướng dẫn góc trái -->
+        <div class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-lg text-xs z-20 text-emerald-300 pointer-events-none shadow-md border border-white/10">
             🏢 An Việt Homes | Click vào vùng sáng căn hộ để xem chi tiết
         </div>
 
-        <!-- MENU CHUYỂN GÓC CAMERA (Dưới cùng) -->
-        <div id="scene-menu" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20">
-            <!-- Render tự động -->
-        </div>
+        <!-- Menu chuyển góc Camera (Dưới cùng) -->
+        <div id="scene-menu" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20"></div>
 
-        <!-- BẢNG THÔNG TIN GLASSMORPHISM -->
+        <!-- Bảng thông tin Glassmorphism (Trượt từ phải ra) -->
         <div id="info-panel" class="glass-panel absolute top-0 right-0 w-[420px] h-full p-6 flex flex-col transform translate-x-full transition-transform z-30">
+            
             <img id="sold-stamp" src="images/sold.png" class="hidden absolute top-4 -left-10 w-32 h-32 z-40 drop-shadow-lg transform -rotate-12 pointer-events-none" alt="Đã bán">
-            <button onclick="closePanel()" class="absolute top-4 right-4 text-white hover:text-gray-300 z-50">
+
+            <button onclick="closePanel()" class="absolute top-4 right-4 text-white hover:text-gray-300 z-50 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
+
             <h2 id="unit-title" class="text-3xl font-bold mb-1 mt-6 text-white uppercase tracking-wider drop-shadow-md"></h2>
             <div id="unit-zone" class="text-sm uppercase tracking-widest text-emerald-400 font-bold mb-6"></div>
+
             <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar space-y-4 relative pr-2"></div>
+            
             <div class="mt-6 pt-4 border-t border-white/20">
-                <button class="w-full py-3 bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold rounded-lg transition-all shadow-[0_4px_15px_rgba(16,185,129,0.3)]">NHẬN BÁO GIÁ</button>
+                <button class="w-full py-3 bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold rounded-lg transition-all shadow-[0_4px_15px_rgba(16,185,129,0.3)] border border-emerald-400/50">
+                    NHẬN BÁO GIÁ
+                </button>
             </div>
         </div>
     </div>
@@ -70,16 +78,16 @@
         let unitData = [];
         let psv, markersPlugin;
         
-        // 1. CẤU HÌNH DANH SÁCH CÁC GÓC CAMERA
+        // CẤU HÌNH GÓC CAMERA & TÊN CỘT TRONG EXCEL
         const scenesConfig = [
-            { id: "goc_tong_the", name: "🛸 Tổng thể trên cao", image: "images/tongthe.jpg" },
-            { id: "goc_cong_vien", name: "🌳 Khu Công viên", image: "images/congvien.jpg" },
-            { id: "goc_clubhouse", name: "🏊‍♂️ Clubhouse", image: "images/clubhouse.jpg" }
+            { id: "tongthe1", name: "🛸 Tổng thể 1", image: "images/tongthe1.jpg", polyCol: "poly_tongthe1" },
+            { id: "tongthe2", name: "🛸 Tổng thể 2", image: "images/tongthe2.jpg", polyCol: "poly_tongthe2" },
+            { id: "tongthe3", name: "🛸 Tổng thể 3", image: "images/tongthe3.jpg", polyCol: "poly_tongthe3" },
+            { id: "tongthe4", name: "🛸 Tổng thể 4", image: "images/tongthe4.jpg", polyCol: "poly_tongthe4" }
         ];
         
-        let currentSceneId = scenesConfig[0].id; // Mặc định vào là góc đầu tiên
+        let currentSceneId = scenesConfig[0].id;
 
-        // Bộ đọc CSV
         function parseCSVRow(str) {
             const result = []; let curVal = ''; let inQuotes = false;
             for (let i = 0; i < str.length; i++) {
@@ -96,6 +104,7 @@
                 let csvText = await response.text();
                 csvText = csvText.replace(/\r/g, '');
                 const lines = csvText.split('\n');
+                
                 if (lines.length >= 2) {
                     const headers = parseCSVRow(lines[0]);
                     for (let i = 1; i < lines.length; i++) {
@@ -106,91 +115,79 @@
                         unitData.push(obj);
                     }
                 }
-            } catch (error) { console.error("Lỗi tải CSV:", error); }
+            } catch (error) { console.error("Lỗi tải data.csv:", error); }
 
             initViewer();
             renderSceneMenu();
         }
 
-        // 2. KHỞI TẠO VIEWER
         function initViewer() {
             const firstScene = scenesConfig[0];
             psv = new PhotoSphereViewer.Viewer({
                 container: document.querySelector('#viewer'),
                 panorama: firstScene.image,
                 autorotateSpeed: '0',
+                defaultZoomLvl: 10,
                 plugins: [ PhotoSphereViewer.MarkersPlugin ]
             });
 
             markersPlugin = psv.getPlugin(PhotoSphereViewer.MarkersPlugin);
 
-            psv.addEventListener('ready', () => {
-                drawPolygonsForCurrentScene();
-            });
-
+            psv.addEventListener('ready', () => drawPolygonsForCurrentScene());
+            
+            // Lắng nghe sự kiện khách hàng click vào Polygon
             markersPlugin.addEventListener('select-marker', ({ marker }) => {
-                openPanel(marker.id);
+                if(marker.id) openPanel(marker.id);
             });
         }
 
-        // 3. HÀM CHUYỂN GÓC CAMERA (Đổi ảnh nền & Gọi lại Polygon)
         function switchScene(sceneId) {
             const targetScene = scenesConfig.find(s => s.id === sceneId);
             if(!targetScene) return;
 
             currentSceneId = sceneId;
-            
-            // Xóa tất cả polygon cũ
             markersPlugin.clearMarkers();
-            
-            // Đóng bảng thông tin (nếu đang mở)
             closePanel();
 
-            // Cập nhật UI Menu
             document.querySelectorAll('.scene-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${sceneId}`).classList.add('active');
 
-            // Hiệu ứng mờ chuyển cảnh
+            // Chuyển ảnh 360 với hiệu ứng mờ 1 giây
             psv.setPanorama(targetScene.image, { showLoader: true, transition: 1000 }).then(() => {
-                // Sau khi load xong ảnh mới -> Quét và vẽ lại Polygon cho ảnh này
                 drawPolygonsForCurrentScene();
             });
         }
 
-        // 4. VẼ POLYGON TƯƠNG ỨNG VỚI GÓC CAMERA HIỆN TẠI
         function drawPolygonsForCurrentScene() {
+            const currentScene = scenesConfig.find(s => s.id === currentSceneId);
+            const activeColumn = currentScene.polyCol; // Lọc đúng cột dữ liệu Excel của góc hiện tại
+
             unitData.forEach(item => {
                 const unitId = item["Mã căn"] || item.id;
-                const rawData = item["polygon_points"];
+                const rawData = item[activeColumn];
 
                 if (unitId && rawData && rawData.trim() !== "") {
                     try {
                         const parsedData = JSON.parse(rawData);
-                        
-                        // KIỂM TRA QUAN TRỌNG: Căn này có dữ liệu Polygon ở góc chụp hiện tại (currentSceneId) không?
-                        if (parsedData[currentSceneId]) {
-                            const scenePoints = parsedData[currentSceneId];
-                            const polygonArray = scenePoints.map(p => [p.yaw, p.pitch]);
+                        const polygonArray = parsedData.map(p => [p.yaw, p.pitch]);
 
-                            const isSold = item["Trạng thái"] && item["Trạng thái"].toString().toLowerCase().includes("đã bán");
-                            const fillColor = isSold ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)';
-                            const strokeColor = isSold ? '#ef4444' : '#34d399';
+                        const isSold = item["Trạng thái"] && item["Trạng thái"].toString().toLowerCase().includes("đã bán");
+                        const fillColor = isSold ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)';
+                        const strokeColor = isSold ? '#ef4444' : '#34d399';
 
-                            markersPlugin.addMarker({
-                                id: unitId,
-                                polygon: polygonArray,
-                                tooltip: { content: `🏠 ${unitId}`, position: 'top center' },
-                                svgStyle: { fill: fillColor, stroke: strokeColor, strokeWidth: '2px', cursor: 'pointer' }
-                            });
-                        }
+                        markersPlugin.addMarker({
+                            id: unitId,
+                            polygon: polygonArray,
+                            tooltip: { content: `🏠 ${unitId}`, position: 'top center' },
+                            svgStyle: { fill: fillColor, stroke: strokeColor, strokeWidth: '2px', cursor: 'pointer' }
+                        });
                     } catch (e) {
-                        console.warn(`Lỗi JSON Polygon ở căn: ${unitId}`);
+                        console.warn(`Lỗi hiển thị Polygon căn ${unitId} ở cột ${activeColumn}`);
                     }
                 }
             });
         }
 
-        // 5. TẠO MENU NÚT CHUYỂN GÓC (DƯỚI ĐÁY MÀN HÌNH)
         function renderSceneMenu() {
             const menuContainer = document.getElementById('scene-menu');
             scenesConfig.forEach(scene => {
@@ -203,7 +200,6 @@
             });
         }
 
-        // 6. HÀM MỞ BẢNG THÔNG TIN (Giữ nguyên)
         function openPanel(unitId) {
             const data = unitData.find(item => item["Mã căn"] === unitId || item.id === unitId);
             if (!data) return;
@@ -221,23 +217,26 @@
 
             const detailsContainer = document.getElementById('unit-details');
             let htmlContent = '';
-            const excludedKeys = ['STT', 'Mã căn', 'id', 'Phân khu', 'zone', 'Trạng thái', 'images', 'polygon_points'];
-
+            
+            // Loại bỏ các cột không cần hiển thị text (STT, Mã căn, Trạng thái, ảnh và các cột polygon)
             for (const [key, value] of Object.entries(data)) {
-                if (excludedKeys.includes(key)) continue;
+                if (['STT', 'Mã căn', 'id', 'Phân khu', 'zone', 'Trạng thái', 'images'].includes(key) || key.startsWith('poly_')) continue;
                 if (value === null || value === undefined || value.toString().trim() === "") continue;
-                htmlContent += `<div class="flex justify-between py-2 border-b border-white/10"><span class="text-white/60 text-sm">${key}</span><span class="font-semibold text-white text-right break-words">${value}</span></div>`;
+                
+                htmlContent += `<div class="flex justify-between py-2 border-b border-white/10"><span class="text-white/60 text-sm">${key}</span><span class="font-semibold text-white text-right max-w-[65%] break-words">${value}</span></div>`;
             }
 
+            // Xử lý nạp ảnh mặt bằng & phối cảnh
             let imagesHtml = '';
             if (data["Mẫu nhà"]) {
                 const mauNhaCode = data["Mẫu nhà"].toString().trim();
-                imagesHtml += `<img src="images/thietkecan/${mauNhaCode}.png" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 hover:scale-[1.02] transition-transform bg-white/5" onerror="this.style.display='none'">`;
+                imagesHtml += `<img src="images/thietkecan/${mauNhaCode}.png" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 bg-white/5" onerror="this.style.display='none'">`;
             }
             if (data.images) {
                 let imageArray = typeof data.images === 'string' ? data.images.split(',') : data.images;
-                imageArray.forEach(img => { if (img.trim()) imagesHtml += `<img src="images/${img.trim()}" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 hover:scale-[1.02] transition-transform" onerror="this.style.display='none'">`; });
+                imageArray.forEach(img => { if (img.trim()) imagesHtml += `<img src="images/${img.trim()}" class="w-full rounded-xl mb-4 shadow-lg border border-white/10" onerror="this.style.display='none'">`; });
             }
+            
             if (imagesHtml !== '') htmlContent += `<div class="mt-8"><h3 class="text-white/50 font-bold mb-4 uppercase text-xs tracking-widest">Mặt bằng & Phối cảnh</h3>` + imagesHtml + `</div>`;
             detailsContainer.innerHTML = htmlContent;
         }
