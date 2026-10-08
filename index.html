@@ -26,7 +26,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Giao diện nút chuyển góc cam */
         .scene-btn {
             background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
             border: 1px solid rgba(255,255,255,0.2); color: white;
@@ -52,7 +51,7 @@
         <!-- Menu chuyển góc Camera (Dưới cùng) -->
         <div id="scene-menu" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20"></div>
 
-        <!-- Bảng thông tin Glassmorphism (Trượt từ phải ra) -->
+        <!-- Bảng thông tin Glassmorphism -->
         <div id="info-panel" class="glass-panel absolute top-0 right-0 w-[420px] h-full p-6 flex flex-col transform translate-x-full transition-transform z-30">
             
             <img id="sold-stamp" src="images/sold.png" class="hidden absolute top-4 -left-10 w-32 h-32 z-40 drop-shadow-lg transform -rotate-12 pointer-events-none" alt="Đã bán">
@@ -88,14 +87,29 @@
         
         let currentSceneId = scenesConfig[0].id;
 
+        // BỘ ĐỌC CSV ĐÃ ĐƯỢC NÂNG CẤP ĐỂ GIỮ NGUYÊN FORMAT JSON
         function parseCSVRow(str) {
-            const result = []; let curVal = ''; let inQuotes = false;
+            const result = [];
+            let curVal = '';
+            let inQuotes = false;
             for (let i = 0; i < str.length; i++) {
-                if (str[i] === '"') inQuotes = !inQuotes;
-                else if (str[i] === ',' && !inQuotes) { result.push(curVal.trim()); curVal = ''; } 
-                else curVal += str[i];
+                if (str[i] === '"') {
+                    // Xử lý ngoặc kép lồng nhau (escaped quotes) của Excel
+                    if (inQuotes && str[i+1] === '"') {
+                        curVal += '"';
+                        i++; // Bỏ qua dấu nháy tiếp theo
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (str[i] === ',' && !inQuotes) {
+                    result.push(curVal.trim());
+                    curVal = '';
+                } else {
+                    curVal += str[i];
+                }
             }
-            result.push(curVal.trim()); return result;
+            result.push(curVal.trim());
+            return result;
         }
 
         async function loadDataAndInitViewer() {
@@ -135,7 +149,6 @@
 
             psv.addEventListener('ready', () => drawPolygonsForCurrentScene());
             
-            // Lắng nghe sự kiện khách hàng click vào Polygon
             markersPlugin.addEventListener('select-marker', ({ marker }) => {
                 if(marker.id) openPanel(marker.id);
             });
@@ -152,7 +165,6 @@
             document.querySelectorAll('.scene-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${sceneId}`).classList.add('active');
 
-            // Chuyển ảnh 360 với hiệu ứng mờ 1 giây
             psv.setPanorama(targetScene.image, { showLoader: true, transition: 1000 }).then(() => {
                 drawPolygonsForCurrentScene();
             });
@@ -160,7 +172,7 @@
 
         function drawPolygonsForCurrentScene() {
             const currentScene = scenesConfig.find(s => s.id === currentSceneId);
-            const activeColumn = currentScene.polyCol; // Lọc đúng cột dữ liệu Excel của góc hiện tại
+            const activeColumn = currentScene.polyCol; 
 
             unitData.forEach(item => {
                 const unitId = item["Mã căn"] || item.id;
@@ -182,7 +194,7 @@
                             svgStyle: { fill: fillColor, stroke: strokeColor, strokeWidth: '2px', cursor: 'pointer' }
                         });
                     } catch (e) {
-                        console.warn(`Lỗi hiển thị Polygon căn ${unitId} ở cột ${activeColumn}`);
+                        console.warn(`Lỗi hiển thị Polygon căn ${unitId} ở cột ${activeColumn}. Dữ liệu lỗi: ${rawData}`);
                     }
                 }
             });
@@ -218,7 +230,6 @@
             const detailsContainer = document.getElementById('unit-details');
             let htmlContent = '';
             
-            // Loại bỏ các cột không cần hiển thị text (STT, Mã căn, Trạng thái, ảnh và các cột polygon)
             for (const [key, value] of Object.entries(data)) {
                 if (['STT', 'Mã căn', 'id', 'Phân khu', 'zone', 'Trạng thái', 'images'].includes(key) || key.startsWith('poly_')) continue;
                 if (value === null || value === undefined || value.toString().trim() === "") continue;
@@ -226,7 +237,6 @@
                 htmlContent += `<div class="flex justify-between py-2 border-b border-white/10"><span class="text-white/60 text-sm">${key}</span><span class="font-semibold text-white text-right max-w-[65%] break-words">${value}</span></div>`;
             }
 
-            // Xử lý nạp ảnh mặt bằng & phối cảnh
             let imagesHtml = '';
             if (data["Mẫu nhà"]) {
                 const mauNhaCode = data["Mẫu nhà"].toString().trim();
