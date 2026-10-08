@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>360 Real Estate Viewer - An Viet Homes</title>
+    
+    <!-- Google Fonts: Manrope -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -15,58 +21,173 @@
     <script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.js"></script>
 
-    <style>
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-            border-left: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: -8px 0 32px 0 rgba(31, 38, 135, 0.2);
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'sans-serif'] },
+                    colors: {
+                        avh: {
+                            dark: '#164f3b',
+                            light: '#47a07d',
+                            pink: '#eaa2cd'
+                        }
+                    }
+                }
+            }
         }
-        .transition-transform { transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+    </script>
+
+    <style>
+        body { font-family: 'Manrope', sans-serif; overflow: hidden; }
+        
+       /* Hiệu ứng Liquid Glass chuẩn Apple (visionOS/macOS) */
+        .glass-3d {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(22, 79, 59, 0.25) 100%);
+            backdrop-filter: blur(40px) saturate(210%) brightness(110%);
+            -webkit-backdrop-filter: blur(40px) saturate(210%) brightness(110%);
+            border-radius: 28px;
+            border-top: 1px solid rgba(255, 255, 255, 0.65);
+            border-left: 1px solid rgba(255, 255, 255, 0.35);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 
+                inset 0 1px 2px rgba(255, 255, 255, 0.45),
+                inset 0 0 24px rgba(255, 255, 255, 0.08),
+                0 24px 48px -12px rgba(0, 0, 0, 0.45);
+        }
+
+        /* Đồng bộ Liquid Glass cho Label tên căn lơ lửng */
+        .unit-marker-label {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            color: #164f3b;
+            padding: 6px 18px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 13px;
+            letter-spacing: 0.02em;
+            box-shadow: 
+                inset 0 1px 1px rgba(255, 255, 255, 0.8),
+                0 8px 20px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            transform: translateY(-20px);
+        }
+
+        .transition-panel { transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* Nút menu Camera */
         .scene-btn {
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.2); color: white;
-            padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: 0.3s;
-            font-weight: 500; font-size: 14px;
+            background: rgba(22, 79, 59, 0.6); 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2); 
+            color: white;
+            padding: 10px 24px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: all 0.3s ease;
+            font-weight: 600; 
+            font-size: 14px;
         }
-        .scene-btn:hover { background: rgba(16, 185, 129, 0.5); }
-        .scene-btn.active { background: rgba(16, 185, 129, 0.9); border-color: #34d399; font-weight: bold; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        .scene-btn:hover { background: rgba(71, 160, 125, 0.6); }
+        .scene-btn.active { 
+            background: #47a07d; 
+            border-color: #47a07d; 
+            color: white;
+            box-shadow: 0 0 15px rgba(71, 160, 125, 0.6); 
+        }
+
+        /* Marker Label nổi của Căn hộ */
+        .unit-marker-label {
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px);
+            color: #164f3b;
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,1);
+            pointer-events: none;
+            transform: translateY(-20px);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 80px; height: 80px;
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-900 overflow-hidden font-sans text-gray-100">
+<body class="bg-gray-900 text-gray-100">
 
     <div class="relative w-full h-screen flex">
         
-        <!-- Khung hiển thị 360 -->
-        <div id="viewer" class="w-full h-full transition-transform transform translate-x-0 relative z-0 bg-black"></div>
+        <!-- Không gian 360 (Giữ nguyên kích thước 100% để không bị viền đen) -->
+        <div id="viewer" class="w-full h-full relative z-0 bg-avh-dark"></div>
 
-        <!-- Hướng dẫn góc trái -->
-        <div class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-lg text-xs z-20 text-emerald-300 pointer-events-none shadow-md border border-white/10">
-            🏢 An Việt Homes | Click vào vùng sáng căn hộ để xem chi tiết
+        <!-- Màn hình Loading -->
+        <div id="loading-overlay" class="absolute inset-0 bg-avh-dark/90 backdrop-blur-md z-50 flex flex-col items-center justify-center hidden">
+            <div class="relative flex items-center justify-center">
+                <div class="spinner absolute"></div>
+                <span class="text-white font-bold text-xs tracking-widest uppercase relative z-10">Loading</span>
+            </div>
+            <p class="text-white/70 mt-12 text-sm">Đang tải dữ liệu căn và mặt bằng. Vui lòng chờ trong giây lát.</p>
         </div>
 
-        <!-- Menu chuyển góc Camera (Dưới cùng) -->
-        <div id="scene-menu" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20"></div>
+        <!-- Màn hình Lỗi (Camera chưa có dữ liệu) -->
+        <div id="error-overlay" class="absolute inset-0 bg-avh-dark/90 backdrop-blur-md z-50 flex flex-col items-center justify-center hidden">
+            <div class="w-20 h-20 rounded-full border-4 border-white/30 flex items-center justify-center mb-6">
+                <span class="text-white text-4xl font-bold">!</span>
+            </div>
+            <h2 class="text-white text-lg mb-2">Dữ liệu góc camera này đang được cập nhật.</h2>
+            <p class="text-white/70 mb-8">Vui lòng quay lại vào thời điểm khác</p>
+            <button onclick="switchScene('tongthe1')" class="bg-avh-pink text-white font-bold py-3 px-8 rounded-full shadow-[0_0_15px_rgba(234,162,205,0.4)] hover:bg-pink-400 transition-colors">
+                Quay lại góc Tổng thể 1
+            </button>
+        </div>
 
-        <!-- Bảng thông tin Glassmorphism -->
-        <div id="info-panel" class="glass-panel absolute top-0 right-0 w-[420px] h-full p-6 flex flex-col transform translate-x-full transition-transform z-30">
+        <!-- Lớp Gradient dưới cùng & Logo -->
+        <div class="absolute bottom-0 w-full h-40 bg-gradient-to-t from-avh-dark/90 to-transparent z-10 pointer-events-none"></div>
+        <img src="image/logo.png" class="absolute bottom-8 left-8 z-20 h-16 object-contain pointer-events-none drop-shadow-lg" alt="An Viet Homes" onerror="this.style.display='none'">
+
+        <!-- Menu Camera -->
+        <div id="scene-menu" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-4 z-20"></div>
+
+        <!-- BẢNG THÔNG TIN GLASSMORPHISM (Phải) -->
+        <div id="info-panel" class="glass-3d absolute top-6 right-6 w-[450px] h-[calc(100vh-48px)] p-8 flex flex-col transform translate-x-[120%] opacity-0 transition-panel z-30 overflow-hidden">
             
-            <img id="sold-stamp" src="images/sold.png" class="hidden absolute top-4 -left-10 w-32 h-32 z-40 drop-shadow-lg transform -rotate-12 pointer-events-none" alt="Đã bán">
-
-            <button onclick="closePanel()" class="absolute top-4 right-4 text-white hover:text-gray-300 z-50 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            <!-- Nút đóng -->
+            <button onclick="closePanel()" class="absolute top-6 right-6 text-white/70 hover:text-white z-50 bg-black/20 rounded-full p-2 backdrop-blur-md transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
-            <h2 id="unit-title" class="text-3xl font-bold mb-1 mt-6 text-white uppercase tracking-wider drop-shadow-md"></h2>
-            <div id="unit-zone" class="text-sm uppercase tracking-widest text-emerald-400 font-bold mb-6"></div>
+            <!-- Tiêu đề -->
+            <div class="mb-6">
+                <div class="flex items-end gap-3">
+                    <span class="text-white/70 text-sm">Mã căn:</span>
+                    <h2 id="unit-title" class="text-4xl font-extrabold text-avh-light uppercase tracking-wide drop-shadow-md leading-none"></h2>
+                </div>
+                <div class="mt-2 text-sm text-white/90">Phân khu: <span id="unit-zone" class="font-semibold"></span></div>
+            </div>
 
-            <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar space-y-4 relative pr-2"></div>
+            <!-- Nội dung cuộn -->
+            <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar relative pr-2 z-10 pb-20"></div>
             
-            <div class="mt-6 pt-4 border-t border-white/20">
-                <button class="w-full py-3 bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold rounded-lg transition-all shadow-[0_4px_15px_rgba(16,185,129,0.3)] border border-emerald-400/50">
+            <!-- Lớp Gradient mờ chân bảng -->
+            <div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-avh-dark/95 to-transparent pointer-events-none z-10 rounded-b-2xl"></div>
+
+            <!-- Nút hành động -->
+            <div class="absolute bottom-8 left-8 right-8 z-20">
+                <button class="w-full py-4 bg-avh-light hover:bg-[#3b8c6a] text-white font-bold rounded-xl transition-all shadow-[0_5px_20px_rgba(71,160,125,0.4)] text-sm uppercase tracking-wider">
                     NHẬN BÁO GIÁ
                 </button>
             </div>
@@ -76,45 +197,39 @@
     <script>
         let unitData = [];
         let psv, markersPlugin;
+        let selectedUnitId = null;
         
-        // CẤU HÌNH GÓC CAMERA & TÊN CỘT TRONG EXCEL
+        // Định nghĩa các góc Camera
         const scenesConfig = [
-            { id: "tongthe1", name: "🛸 Tổng thể 1", image: "images/tongthe1.jpg", polyCol: "poly_tongthe1" },
-            { id: "tongthe2", name: "🛸 Tổng thể 2", image: "images/tongthe2.jpg", polyCol: "poly_tongthe2" },
-            { id: "tongthe3", name: "🛸 Tổng thể 3", image: "images/tongthe3.jpg", polyCol: "poly_tongthe3" },
-            { id: "tongthe4", name: "🛸 Tổng thể 4", image: "images/tongthe4.jpg", polyCol: "poly_tongthe4" }
+            { id: "tongthe1", name: "Tổng thể 1", image: "image/tongthe1.jpg", polyCol: "poly_tongthe1" },
+            { id: "tongthe2", name: "Tổng thể 2", image: "image/dtvt1.jpg", polyCol: "poly_tongthe2" },
+            { id: "tongthe3", name: "Tổng thể 3", image: "image/dlvt2.jpg", polyCol: "poly_tongthe3" },
+            { id: "tongthe4", name: "Tổng thể 4", image: "image/tongthe4.jpg", polyCol: "poly_tongthe4" }
         ];
         
         let currentSceneId = scenesConfig[0].id;
 
-        // BỘ ĐỌC CSV ĐÃ ĐƯỢC NÂNG CẤP ĐỂ GIỮ NGUYÊN FORMAT JSON
+        function showLoader() { document.getElementById('loading-overlay').classList.remove('hidden'); }
+        function hideLoader() { document.getElementById('loading-overlay').classList.add('hidden'); }
+        function showError() { document.getElementById('error-overlay').classList.remove('hidden'); }
+        function hideError() { document.getElementById('error-overlay').classList.add('hidden'); }
+
+        // Bộ đọc CSV
         function parseCSVRow(str) {
-            const result = [];
-            let curVal = '';
-            let inQuotes = false;
+            const result = []; let curVal = ''; let inQuotes = false;
             for (let i = 0; i < str.length; i++) {
                 if (str[i] === '"') {
-                    // Xử lý ngoặc kép lồng nhau (escaped quotes) của Excel
-                    if (inQuotes && str[i+1] === '"') {
-                        curVal += '"';
-                        i++; // Bỏ qua dấu nháy tiếp theo
-                    } else {
-                        inQuotes = !inQuotes;
-                    }
-                } else if (str[i] === ',' && !inQuotes) {
-                    result.push(curVal.trim());
-                    curVal = '';
-                } else {
-                    curVal += str[i];
-                }
+                    if (inQuotes && str[i+1] === '"') { curVal += '"'; i++; } else { inQuotes = !inQuotes; }
+                } else if (str[i] === ',' && !inQuotes) { result.push(curVal.trim()); curVal = ''; } 
+                else { curVal += str[i]; }
             }
-            result.push(curVal.trim());
-            return result;
+            result.push(curVal.trim()); return result;
         }
 
         async function loadDataAndInitViewer() {
             try {
                 const response = await fetch('data.csv'); 
+                if(!response.ok) throw new Error("Không tìm thấy CSV");
                 let csvText = await response.text();
                 csvText = csvText.replace(/\r/g, '');
                 const lines = csvText.split('\n');
@@ -129,7 +244,7 @@
                         unitData.push(obj);
                     }
                 }
-            } catch (error) { console.error("Lỗi tải data.csv:", error); }
+            } catch (error) { console.error("Lỗi:", error); }
 
             initViewer();
             renderSceneMenu();
@@ -142,6 +257,7 @@
                 panorama: firstScene.image,
                 autorotateSpeed: '0',
                 defaultZoomLvl: 10,
+                navbar: false,
                 plugins: [ PhotoSphereViewer.MarkersPlugin ]
             });
 
@@ -149,27 +265,42 @@
 
             psv.addEventListener('ready', () => drawPolygonsForCurrentScene());
             
+            // Xử lý sự kiện click vào Polygon
             markersPlugin.addEventListener('select-marker', ({ marker }) => {
-                if(marker.id) openPanel(marker.id);
+                if(marker.id && !marker.id.includes('_label')) {
+                    openPanel(marker.id, marker);
+                }
             });
         }
 
         function switchScene(sceneId) {
+            hideError();
             const targetScene = scenesConfig.find(s => s.id === sceneId);
             if(!targetScene) return;
 
             currentSceneId = sceneId;
+            selectedUnitId = null;
             markersPlugin.clearMarkers();
             closePanel();
 
+            // Đổi UI Menu
             document.querySelectorAll('.scene-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${sceneId}`).classList.add('active');
 
-            psv.setPanorama(targetScene.image, { showLoader: true, transition: 1000 }).then(() => {
+            showLoader();
+
+            psv.setPanorama(targetScene.image, { showLoader: false, transition: 800 })
+            .then(() => {
+                hideLoader();
                 drawPolygonsForCurrentScene();
+            })
+            .catch(() => {
+                hideLoader();
+                showError();
             });
         }
 
+        // Vẽ các khối Polygon lên ảnh
         function drawPolygonsForCurrentScene() {
             const currentScene = scenesConfig.find(s => s.id === currentSceneId);
             const activeColumn = currentScene.polyCol; 
@@ -184,18 +315,20 @@
                         const polygonArray = parsedData.map(p => [p.yaw, p.pitch]);
 
                         const isSold = item["Trạng thái"] && item["Trạng thái"].toString().toLowerCase().includes("đã bán");
-                        const fillColor = isSold ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.4)';
-                        const strokeColor = isSold ? '#ef4444' : '#34d399';
+                        
+                        // Màu mặc định
+                        const fillColor = isSold ? 'rgba(234, 162, 205, 0.4)' : 'rgba(71, 160, 125, 0.3)';
+                        const strokeColor = isSold ? '#eaa2cd' : '#47a07d';
 
                         markersPlugin.addMarker({
                             id: unitId,
                             polygon: polygonArray,
-                            tooltip: { content: `🏠 ${unitId}`, position: 'top center' },
-                            svgStyle: { fill: fillColor, stroke: strokeColor, strokeWidth: '2px', cursor: 'pointer' }
+                            tooltip: { content: `Nhấp để xem ${unitId}`, position: 'top center' },
+                            svgStyle: { fill: fillColor, stroke: strokeColor, strokeWidth: '2px', cursor: 'pointer' },
+                            // Lưu data gốc để tính toán tâm
+                            data: { points: polygonArray, isSold: isSold } 
                         });
-                    } catch (e) {
-                        console.warn(`Lỗi hiển thị Polygon căn ${unitId} ở cột ${activeColumn}. Dữ liệu lỗi: ${rawData}`);
-                    }
+                    } catch (e) {}
                 }
             });
         }
@@ -212,48 +345,138 @@
             });
         }
 
-        function openPanel(unitId) {
+        // Xử lý khi chọn căn
+        function openPanel(unitId, markerObj) {
             const data = unitData.find(item => item["Mã căn"] === unitId || item.id === unitId);
             if (!data) return;
 
-            document.getElementById('viewer').style.transform = "translateX(-200px)"; 
-            document.getElementById('info-panel').classList.remove('translate-x-full');
+            // 1. Phục hồi màu Polygon cũ nếu có
+            if (selectedUnitId && selectedUnitId !== unitId) {
+                const oldMarker = markersPlugin.getMarker(selectedUnitId);
+                if (oldMarker) {
+                    const oldSold = oldMarker.data.isSold;
+                    markersPlugin.updateMarker({
+                        id: selectedUnitId,
+                        svgStyle: { 
+                            fill: oldSold ? 'rgba(234, 162, 205, 0.4)' : 'rgba(71, 160, 125, 0.3)', 
+                            stroke: oldSold ? '#eaa2cd' : '#47a07d', strokeWidth: '2px' 
+                        }
+                    });
+                    markersPlugin.removeMarker(`${selectedUnitId}_label`);
+                }
+            }
 
-            const soldStamp = document.getElementById('sold-stamp');
-            if (data["Trạng thái"] && data["Trạng thái"].toString().toLowerCase().includes("đã bán")) {
-                soldStamp.classList.remove('hidden');
-            } else { soldStamp.classList.add('hidden'); }
+            selectedUnitId = unitId;
+
+            // 2. Nổi bật Polygon đang chọn (Màu trắng sáng)
+            markersPlugin.updateMarker({
+                id: unitId,
+                svgStyle: { fill: 'rgba(255, 255, 255, 0.4)', stroke: '#ffffff', strokeWidth: '3px' }
+            });
+
+            // 3. Tính toán Tâm của Polygon để gắn Label và Xoay Camera
+            const points = markerObj.data.points;
+            let sumY = 0, sumP = 0;
+            points.forEach(p => { sumY += p[0]; sumP += p[1]; });
+            const centerYaw = sumY / points.length;
+            const centerPitch = sumP / points.length;
+
+            // Gắn Label lơ lửng tên căn
+            markersPlugin.addMarker({
+                id: `${unitId}_label`,
+                position: { yaw: centerYaw, pitch: centerPitch },
+                html: `<div class="unit-marker-label">${unitId}</div>`,
+                anchor: 'bottom center'
+            });
+
+            // 4. Di chuyển Camera mượt mà (Lệch tâm về bên trái một chút để chừa chỗ cho bảng Menu)
+            // Tăng Yaw một chút (VD: +0.3 radian) sẽ đẩy vật thể sang mép trái màn hình
+            psv.animate({
+                yaw: centerYaw + 0.35, 
+                pitch: centerPitch,
+                zoom: 40,
+                speed: 1000
+            });
+
+            // 5. Hiển thị Giao diện Thông tin
+            const infoPanel = document.getElementById('info-panel');
+            infoPanel.classList.remove('translate-x-[120%]', 'opacity-0');
+            infoPanel.classList.add('translate-x-0', 'opacity-100');
 
             document.getElementById('unit-title').innerText = data["Mã căn"] || data.id || "";
-            document.getElementById('unit-zone').innerText = data["Phân khu"] || data.zone || "";
+            document.getElementById('unit-zone').innerText = data["Phân khu"] || data.zone || "N/A";
 
             const detailsContainer = document.getElementById('unit-details');
             let htmlContent = '';
             
+            // Render các dòng Specs
             for (const [key, value] of Object.entries(data)) {
                 if (['STT', 'Mã căn', 'id', 'Phân khu', 'zone', 'Trạng thái', 'images'].includes(key) || key.startsWith('poly_')) continue;
                 if (value === null || value === undefined || value.toString().trim() === "") continue;
                 
-                htmlContent += `<div class="flex justify-between py-2 border-b border-white/10"><span class="text-white/60 text-sm">${key}</span><span class="font-semibold text-white text-right max-w-[65%] break-words">${value}</span></div>`;
+                htmlContent += `
+                    <div class="flex justify-between py-3 border-b border-white/10 items-center">
+                        <span class="text-white/60 text-sm font-medium">${key}</span>
+                        <span class="font-bold text-white text-right text-sm">${value}</span>
+                    </div>`;
             }
 
-            let imagesHtml = '';
-            if (data["Mẫu nhà"]) {
-                const mauNhaCode = data["Mẫu nhà"].toString().trim();
-                imagesHtml += `<img src="images/thietkecan/${mauNhaCode}.png" class="w-full rounded-xl mb-4 shadow-lg border border-white/10 bg-white/5" onerror="this.style.display='none'">`;
-            }
+            // Render Hình ảnh (Chia 2 phần: Diễn họa & Mặt bằng nếu có)
+            let imgDienHoa = '';
             if (data.images) {
-                let imageArray = typeof data.images === 'string' ? data.images.split(',') : data.images;
-                imageArray.forEach(img => { if (img.trim()) imagesHtml += `<img src="images/${img.trim()}" class="w-full rounded-xl mb-4 shadow-lg border border-white/10" onerror="this.style.display='none'">`; });
+                let imgArr = typeof data.images === 'string' ? data.images.split(',') : data.images;
+                imgArr.forEach(img => { 
+                    if (img.trim()) imgDienHoa += `<img src="image/${img.trim()}" class="w-full h-24 object-cover rounded-lg border border-white/20 shadow-md">`; 
+                });
+            }
+
+            let imgMatBang = '';
+            if (data["Mẫu nhà"]) {
+                const mauNha = data["Mẫu nhà"].toString().trim();
+                // Giả lập chia lưới mặt bằng
+                imgMatBang += `<img src="image/thietkecan/${mauNha}.png" class="w-full h-24 object-cover rounded-lg border border-white/20 shadow-md bg-white/10">`;
             }
             
-            if (imagesHtml !== '') htmlContent += `<div class="mt-8"><h3 class="text-white/50 font-bold mb-4 uppercase text-xs tracking-widest">Mặt bằng & Phối cảnh</h3>` + imagesHtml + `</div>`;
+            if (imgDienHoa !== '') {
+                htmlContent += `
+                <div class="mt-6">
+                    <h3 class="text-white/70 font-semibold mb-3 text-xs tracking-widest uppercase">Hình ảnh diễn họa:</h3>
+                    <div class="grid grid-cols-2 gap-3">${imgDienHoa}</div>
+                </div>`;
+            }
+
+            if (imgMatBang !== '') {
+                htmlContent += `
+                <div class="mt-6">
+                    <h3 class="text-white/70 font-semibold mb-3 text-xs tracking-widest uppercase">Mặt bằng căn:</h3>
+                    <div class="grid grid-cols-3 gap-2">${imgMatBang}</div>
+                </div>`;
+            }
+            
             detailsContainer.innerHTML = htmlContent;
         }
 
         function closePanel() {
-            document.getElementById('viewer').style.transform = "translateX(0)";
-            document.getElementById('info-panel').classList.add('translate-x-full');
+            const infoPanel = document.getElementById('info-panel');
+            infoPanel.classList.remove('translate-x-0', 'opacity-100');
+            infoPanel.classList.add('translate-x-[120%]', 'opacity-0');
+
+            // Reset Polygon đang chọn về bình thường
+            if (selectedUnitId) {
+                const oldMarker = markersPlugin.getMarker(selectedUnitId);
+                if (oldMarker) {
+                    const oldSold = oldMarker.data.isSold;
+                    markersPlugin.updateMarker({
+                        id: selectedUnitId,
+                        svgStyle: { 
+                            fill: oldSold ? 'rgba(234, 162, 205, 0.4)' : 'rgba(71, 160, 125, 0.3)', 
+                            stroke: oldSold ? '#eaa2cd' : '#47a07d', strokeWidth: '2px' 
+                        }
+                    });
+                    markersPlugin.removeMarker(`${selectedUnitId}_label`);
+                }
+                selectedUnitId = null;
+            }
         }
 
         loadDataAndInitViewer();
