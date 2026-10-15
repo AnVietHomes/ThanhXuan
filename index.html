@@ -28,7 +28,7 @@
                     fontFamily: { sans: ['Manrope', 'sans-serif'] },
                     colors: {
                         avh: {
-                            dark: '#164f3b',
+                            dark: '#0c3828',
                             light: '#47a07d',
                             pink: '#eaa2cd'
                         }
@@ -39,15 +39,13 @@
     </script>
 
     <style>
-        body { font-family: 'Manrope', sans-serif; overflow: hidden; }
+        body { font-family: 'Manrope', sans-serif; overflow: hidden; background-color: #0c3828; }
         
         .psv-notification, .psv-loader-container { display: none !important; }
         
-        /* HIỆU ỨNG FADE CHO POLYGON KHI BẬT/TẮT */
         .psv-markers { transition: opacity 0.5s ease-in-out !important; }
         .markers-hidden .psv-markers { opacity: 0 !important; pointer-events: none !important; }
 
-        /* Hiệu ứng Liquid Glass Apple (Khúc xạ viền) */
         .glass-3d {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(35px) saturate(120%) brightness(105%);
@@ -66,7 +64,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Nút menu Camera & Nút Toggle (Liquid Glass) */
         .glass-btn {
             background: rgba(22, 79, 59, 0.35); 
             backdrop-filter: blur(25px) saturate(150%);
@@ -89,7 +86,6 @@
             box-shadow: inset 0 1px 2px rgba(255,255,255,0.6), 0 0 20px rgba(255,255,255,0.25); 
         }
 
-        /* Label tên căn lơ lửng */
         .unit-marker-label {
             background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(20px) saturate(150%);
@@ -108,24 +104,22 @@
 
         .spinner {
             width: 80px; height: 80px;
-            border: 4px solid rgba(255,255,255,0.2);
-            border-top-color: white;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: #47a07d;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Animation Popup Ảnh */
         .popup-zoom-enter { transform: scale(0.9); opacity: 0; }
         .popup-zoom-active { transform: scale(1); opacity: 1; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .popup-zoom-exit { transform: scale(0.9); opacity: 0; transition: all 0.3s ease-out; }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100">
+<body class="text-gray-100">
 
     <div class="relative w-full h-screen flex">
         
-        <!-- Không gian 360 -->
         <div id="viewer" class="w-full h-full relative z-0 bg-avh-dark"></div>
 
         <div class="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-4 py-2 rounded-xl text-xs z-20 text-white pointer-events-none shadow-md border border-white/10 flex items-center gap-2">
@@ -133,7 +127,6 @@
             Kéo xoay màn hình & Click vào vị trí căn để xem thông tin
         </div>
 
-        <!-- NÚT GẠT BẬT/TẮT POLYGON -->
         <div class="absolute top-[60px] left-4 z-20 glass-btn flex items-center gap-3 px-4 py-2 hover:bg-white/10" onclick="togglePolygons()">
             <span class="text-white/90 text-[13px] font-bold tracking-wide" id="poly-toggle-text">Hiển thị các căn</span>
             <div class="relative w-11 h-6 bg-black/40 rounded-full border border-white/20 shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]">
@@ -141,15 +134,17 @@
             </div>
         </div>
 
-        <div id="loading-overlay" class="absolute inset-0 bg-avh-dark/90 backdrop-blur-md z-50 flex flex-col items-center justify-center hidden">
+        <!-- MÀN HÌNH CHỜ SPLASH SCREEN -->
+        <div id="loading-overlay" class="absolute inset-0 bg-avh-dark z-[100] flex flex-col items-center justify-center transition-opacity duration-700 opacity-100">
+            <img src="images/logo.png" class="h-24 md:h-32 mb-12 drop-shadow-2xl animate-pulse" alt="An Viet Homes" onerror="this.style.display='none'">
             <div class="relative flex items-center justify-center">
                 <div class="spinner absolute"></div>
-                <span class="text-white font-bold text-xs tracking-widest uppercase relative z-10">Loading</span>
+                <span class="text-avh-light font-bold text-xs tracking-widest uppercase relative z-10">Loading</span>
             </div>
-            <p class="text-white/70 mt-12 text-sm font-medium">Đang tải dữ liệu không gian. Vui lòng chờ trong giây lát.</p>
+            <p class="text-white/60 mt-12 text-sm font-medium tracking-wide">Đang tải không gian 360°. Vui lòng chờ trong giây lát...</p>
         </div>
 
-        <div id="error-overlay" class="absolute inset-0 bg-avh-dark/90 backdrop-blur-md z-50 flex flex-col items-center justify-center hidden">
+        <div id="error-overlay" class="absolute inset-0 bg-avh-dark z-[100] flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-500">
             <div class="w-20 h-20 rounded-full border-4 border-white/30 flex items-center justify-center mb-6">
                 <span class="text-white text-4xl font-bold">!</span>
             </div>
@@ -160,7 +155,7 @@
             </button>
         </div>
 
-        <div class="absolute bottom-0 w-full h-48 bg-gradient-to-t from-black/80 to-transparent z-10 pointer-events-none"></div>
+        <div class="absolute bottom-0 w-full h-48 bg-gradient-to-t from-black/90 to-transparent z-10 pointer-events-none"></div>
         <img src="images/logo.png" class="absolute bottom-6 left-6 md:bottom-8 md:left-8 z-20 h-12 md:h-16 object-contain pointer-events-none drop-shadow-lg" alt="An Viet Homes" onerror="this.style.display='none'">
 
         <!-- MENU CAMERA -->
@@ -180,27 +175,23 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
-            <!-- Tiêu đề & Dấu mộc (Flexbox tự dãn cách thông minh) -->
+            <!-- Tiêu đề & Dấu mộc Đã bán -->
             <div class="mb-6">
                 <div class="flex items-center gap-3 mb-2 flex-wrap">
                     <span class="text-white/80 text-sm font-medium whitespace-nowrap">Mã căn:</span>
                     <div class="flex items-center relative">
                         <h2 id="unit-title" class="text-2xl md:text-3xl font-extrabold uppercase tracking-widest px-4 py-1 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-avh-dark shadow-sm"></h2>
-                        <!-- Con dấu SOLD OUT tự đẩy sang phải -->
                         <img id="sold-stamp" src="images/sold.png" class="hidden w-16 h-16 md:w-20 md:h-20 object-contain transform -rotate-12 drop-shadow-md ml-3" alt="Đã bán">
                     </div>
                 </div>
                 <div class="text-sm text-white/90">Phân khu: <span id="unit-zone" class="font-semibold text-white"></span></div>
             </div>
 
-            <!-- Nội dung cuộn -->
             <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar relative pr-2 z-10 pb-6"></div>
-            
-            <!-- Lớp Gradient mờ chân bảng -->
             <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-black/30 to-transparent pointer-events-none z-10 rounded-b-[24px]"></div>
         </div>
 
-        <!-- IMAGE POPUP (LIGHTBOX) -->
+        <!-- IMAGE POPUP -->
         <div id="image-popup" class="fixed inset-0 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
             <div class="absolute inset-0 bg-black/60 backdrop-blur-2xl saturate-150 cursor-pointer" onclick="closeImagePopup()"></div>
             <div id="popup-content" class="relative z-10 max-w-[90vw] max-h-[90vh] popup-zoom-enter">
@@ -219,23 +210,52 @@
         let selectedUnitId = null;
         let isPolygonsVisible = true; 
         let isMobileMenuOpen = false; 
+        let isPreloaded = false; // Biến đánh dấu đã tải ngầm ảnh hay chưa
         
+        // CẬP NHẬT TỌA ĐỘ YAW, PITCH, ZOOM MỚI CHO 7 GÓC CAM
         const scenesConfig = [
-            { id: "tongthe1", name: "Đơn lập Lakeside Residences", image: "images/tongthe1.jpg", polyCol: "poly_tongthe1" },
-            { id: "tongthe2", name: "Song lập Lakeside Residences", image: "images/tongthe2.jpg", polyCol: "poly_tongthe2" },
-            { id: "tongthe3", name: "Valley Town", image: "images/tongthe3.jpg", polyCol: "poly_tongthe3" },
-            { id: "tongthe4", name: "Valley Park góc 1", image: "images/tongthe4.jpg", polyCol: "poly_tongthe4" },
-            { id: "tongthe5", name: "Valley Park góc 2", image: "images/tongthe5.jpg", polyCol: "poly_tongthe5" },
-            { id: "tongthe6", name: "Spring Residences", image: "images/tongthe6.jpg", polyCol: "poly_tongthe6" },
-            { id: "tongthe7", name: "Camellia Residences", image: "images/tongthe7.jpg", polyCol: "poly_tongthe7" }
+            { id: "tongthe1", name: "Đơn lập Lakeside Residences", image: "images/tongthe1.jpg", polyCol: "poly_tongthe1", defaultYaw: 6.2074, defaultPitch: -0.5533, defaultZoom: 0 },
+            { id: "tongthe2", name: "Song lập Lakeside Residences", image: "images/tongthe2.jpg", polyCol: "poly_tongthe2", defaultYaw: 1.1691, defaultPitch: -0.8860, defaultZoom: 0 },
+            { id: "tongthe3", name: "Valley Town", image: "images/tongthe3.jpg", polyCol: "poly_tongthe3", defaultYaw: 0.1108, defaultPitch: -0.8360, defaultZoom: 0 },
+            { id: "tongthe4", name: "Valley Park góc 1", image: "images/tongthe4.jpg", polyCol: "poly_tongthe4", defaultYaw: 6.2279, defaultPitch: -0.8596, defaultZoom: 0 },
+            { id: "tongthe5", name: "Valley Park góc 2", image: "images/tongthe5.jpg", polyCol: "poly_tongthe5", defaultYaw: 1.2538, defaultPitch: -0.7360, defaultZoom: 0 },
+            { id: "tongthe6", name: "Spring Residences", image: "images/tongthe6.jpg", polyCol: "poly_tongthe6", defaultYaw: 0.1219, defaultPitch: -0.8907, defaultZoom: 0 },
+            { id: "tongthe7", name: "Camellia Residences", image: "images/tongthe7.jpg", polyCol: "poly_tongthe7", defaultYaw: 5.2973, defaultPitch: -0.7169, defaultZoom: 0 }
         ];
         
         let currentSceneId = scenesConfig[0].id;
 
-        function showLoader() { document.getElementById('loading-overlay').classList.remove('hidden'); }
-        function hideLoader() { document.getElementById('loading-overlay').classList.add('hidden'); }
-        function showError() { document.getElementById('error-overlay').classList.remove('hidden'); }
-        function hideError() { document.getElementById('error-overlay').classList.add('hidden'); }
+        function showLoader() { 
+            const loader = document.getElementById('loading-overlay');
+            loader.classList.remove('hidden');
+            setTimeout(() => { loader.classList.remove('opacity-0'); }, 10);
+        }
+        function hideLoader() { 
+            const loader = document.getElementById('loading-overlay');
+            loader.classList.add('opacity-0');
+            setTimeout(() => { loader.classList.add('hidden'); }, 700); 
+        }
+        
+        function showError() { 
+            const error = document.getElementById('error-overlay');
+            error.classList.remove('hidden');
+            setTimeout(() => { error.classList.remove('opacity-0'); }, 10);
+        }
+        function hideError() { 
+            const error = document.getElementById('error-overlay');
+            error.classList.add('opacity-0');
+            setTimeout(() => { error.classList.add('hidden'); }, 500);
+        }
+
+        // CHỨC NĂNG TẢI TRƯỚC HÌNH ẢNH BACKGROUND TĂNG TỐC ĐỘ (PRELOAD)
+        function preloadOtherPanoramas() {
+            scenesConfig.forEach((scene, index) => {
+                if (index !== 0) {
+                    const img = new Image();
+                    img.src = scene.image;
+                }
+            });
+        }
 
         function toggleMobileMenu() {
             isMobileMenuOpen = !isMobileMenuOpen;
@@ -334,16 +354,31 @@
             psv = new PhotoSphereViewer.Viewer({
                 container: document.querySelector('#viewer'),
                 panorama: firstScene.image,
+                defaultYaw: firstScene.defaultYaw,
+                defaultPitch: firstScene.defaultPitch,
+                defaultZoomLvl: firstScene.defaultZoom,
                 autorotateSpeed: '0',
-                defaultZoomLvl: 10,
                 navbar: false,
                 plugins: [ PhotoSphereViewer.MarkersPlugin ]
             });
 
             markersPlugin = psv.getPlugin(PhotoSphereViewer.MarkersPlugin);
 
-            psv.addEventListener('ready', () => drawPolygonsForCurrentScene());
-            psv.addEventListener('error', () => showError());
+            psv.addEventListener('ready', () => { 
+                hideLoader();
+                if(isPolygonsVisible) drawPolygonsForCurrentScene(); 
+                
+                // Mới: Bật tải trước các bức ảnh còn lại vào bộ nhớ đệm
+                if(!isPreloaded) {
+                    preloadOtherPanoramas();
+                    isPreloaded = true;
+                }
+            });
+            
+            psv.addEventListener('error', () => {
+                hideLoader();
+                showError();
+            });
             
             markersPlugin.addEventListener('select-marker', ({ marker }) => {
                 if(marker.id && !marker.id.includes('_label')) {
@@ -351,7 +386,6 @@
                 }
             });
 
-            // SỰ KIỆN HOVER VÀO POLYGON (Nhận biết màu Đã Bán)
             markersPlugin.addEventListener('over-marker', ({ marker }) => {
                 if(marker.id && !marker.id.includes('_label') && marker.id !== selectedUnitId) {
                     const isSold = marker.data.isSold;
@@ -365,7 +399,6 @@
                 }
             });
 
-            // SỰ KIỆN RỜI CHUỘT KHỎI POLYGON
             markersPlugin.addEventListener('leave-marker', ({ marker }) => {
                 if(marker.id && !marker.id.includes('_label') && marker.id !== selectedUnitId) {
                     const isSold = marker.data.isSold;
@@ -397,10 +430,17 @@
 
             showLoader();
 
-            psv.setPanorama(targetScene.image, { showLoader: false, transition: 800 })
+            // Set góc Camera theo mặc định đã thiết lập
+            psv.setPanorama(targetScene.image, { 
+                yaw: targetScene.defaultYaw, 
+                pitch: targetScene.defaultPitch,
+                zoom: targetScene.defaultZoom,
+                showLoader: false, 
+                transition: 600 /* Giảm thời gian trượt xuống cho cảm giác chuyển nhanh hơn */
+            })
             .then(() => {
                 hideLoader();
-                drawPolygonsForCurrentScene();
+                if(isPolygonsVisible) drawPolygonsForCurrentScene();
             })
             .catch(() => {
                 hideLoader();
@@ -421,7 +461,6 @@
                         const parsedData = JSON.parse(rawData);
                         const polygonArray = parsedData.map(p => [p.yaw, p.pitch]);
 
-                        // Tách màu cho Đã Bán (Đỏ) và Chưa Bán (Xanh Lục)
                         const isSold = item["Trạng thái"] && item["Trạng thái"].toString().toLowerCase().includes("đã bán");
                         const fillColor = isSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)';
                         const strokeColor = isSold ? '#ef4444' : '#47a07d';
@@ -454,7 +493,6 @@
             const data = unitData.find(item => item["Mã căn"] === unitId || item.id === unitId);
             if (!data) return;
 
-            // Phục hồi màu Polygon cũ
             if (selectedUnitId && selectedUnitId !== unitId) {
                 const oldMarker = markersPlugin.getMarker(selectedUnitId);
                 if (oldMarker) {
@@ -472,7 +510,6 @@
 
             selectedUnitId = unitId;
 
-            // Nổi bật Polygon đang chọn (Màu trắng sữa)
             markersPlugin.updateMarker({
                 id: unitId,
                 svgStyle: { fill: 'rgba(255, 255, 255, 0.6)', stroke: '#ffffff', strokeWidth: '4px' }
@@ -515,14 +552,9 @@
             document.getElementById('unit-title').innerText = data["Mã căn"] || data.id || "";
             document.getElementById('unit-zone').innerText = data["Phân khu"] || data.zone || "N/A";
 
-            // KIỂM TRA TRẠNG THÁI ĐÃ BÁN ĐỂ HIỆN CON DẤU ĐỎ
             const isSoldOut = data["Trạng thái"] && data["Trạng thái"].toString().toLowerCase().includes("đã bán");
             const stampEl = document.getElementById('sold-stamp');
-            if (isSoldOut) {
-                stampEl.classList.remove('hidden');
-            } else {
-                stampEl.classList.add('hidden');
-            }
+            if (isSoldOut) { stampEl.classList.remove('hidden'); } else { stampEl.classList.add('hidden'); }
 
             const detailsContainer = document.getElementById('unit-details');
             let htmlContent = '';
