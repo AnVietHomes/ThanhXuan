@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>360 Real Estate Viewer - An Viet Homes</title>
-        <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="icon" type="image/png" href="images/favicon.png">
     
     <!-- Google Fonts: Manrope -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,6 +47,7 @@
         .psv-markers { transition: opacity 0.5s ease-in-out !important; }
         .markers-hidden .psv-markers { opacity: 0 !important; pointer-events: none !important; }
 
+        /* Liquid Glass */
         .glass-3d {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(35px) saturate(120%) brightness(105%);
@@ -105,7 +106,7 @@
 
         .spinner {
             width: 80px; height: 80px;
-            border: 4px solid rgba(255,255,255,0.1);
+            border: 4px solid rgba(255,255,255,0.15);
             border-top-color: #47a07d;
             border-radius: 50%;
             animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
@@ -135,17 +136,17 @@
             </div>
         </div>
 
-        <!-- MÀN HÌNH CHỜ SPLASH SCREEN -->
-        <div id="loading-overlay" class="absolute inset-0 bg-avh-dark z-[100] flex flex-col items-center justify-center transition-opacity duration-700 opacity-100">
+        <!-- MÀN HÌNH CHỜ SPLASH SCREEN ĐÃ ĐƯỢC LÀM TRONG SUỐT VÀ SANG TRỌNG HƠN -->
+        <div id="loading-overlay" class="absolute inset-0 bg-[#0c3828]/60 backdrop-blur-2xl z-[100] flex flex-col items-center justify-center transition-opacity duration-700 opacity-100">
             <img src="images/logo.png" class="h-24 md:h-32 mb-12 drop-shadow-2xl animate-pulse" alt="An Viet Homes" onerror="this.style.display='none'">
             <div class="relative flex items-center justify-center">
                 <div class="spinner absolute"></div>
                 <span class="text-avh-light font-bold text-xs tracking-widest uppercase relative z-10">Loading</span>
             </div>
-            <p class="text-white/60 mt-12 text-sm font-medium tracking-wide">Đang tải không gian 360°. Vui lòng chờ trong giây lát...</p>
+            <p class="text-white/70 mt-12 text-sm font-medium tracking-wide">Đang tải không gian 360°. Vui lòng chờ trong giây lát...</p>
         </div>
 
-        <div id="error-overlay" class="absolute inset-0 bg-avh-dark z-[100] flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-500">
+        <div id="error-overlay" class="absolute inset-0 bg-[#0c3828]/60 backdrop-blur-2xl z-[100] flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-500">
             <div class="w-20 h-20 rounded-full border-4 border-white/30 flex items-center justify-center mb-6">
                 <span class="text-white text-4xl font-bold">!</span>
             </div>
@@ -156,7 +157,7 @@
             </button>
         </div>
 
-        <div class="absolute bottom-0 w-full h-48 bg-gradient-to-t from-black/90 to-transparent z-10 pointer-events-none"></div>
+        <div class="absolute bottom-0 w-full h-48 bg-gradient-to-t from-black/80 to-transparent z-10 pointer-events-none"></div>
         <img src="images/logo.png" class="absolute bottom-6 left-6 md:bottom-8 md:left-8 z-20 h-12 md:h-16 object-contain pointer-events-none drop-shadow-lg" alt="An Viet Homes" onerror="this.style.display='none'">
 
         <!-- MENU CAMERA -->
@@ -171,12 +172,9 @@
 
         <!-- BẢNG THÔNG TIN LIQUID GLASS -->
         <div id="info-panel" class="glass-3d absolute top-6 right-6 w-[450px] max-w-[90vw] h-[calc(100vh-48px)] p-6 md:p-8 flex flex-col transform translate-x-[120%] opacity-0 transition-panel z-30 overflow-hidden">
-            
             <button onclick="closePanel()" class="absolute top-6 right-6 text-white/70 hover:text-white z-50 bg-black/20 rounded-full p-2 backdrop-blur-md transition-colors border border-white/20 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-
-            <!-- Tiêu đề & Dấu mộc Đã bán -->
             <div class="mb-6">
                 <div class="flex items-center gap-3 mb-2 flex-wrap">
                     <span class="text-white/80 text-sm font-medium whitespace-nowrap">Mã căn:</span>
@@ -187,7 +185,6 @@
                 </div>
                 <div class="text-sm text-white/90">Phân khu: <span id="unit-zone" class="font-semibold text-white"></span></div>
             </div>
-
             <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar relative pr-2 z-10 pb-6"></div>
             <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-black/30 to-transparent pointer-events-none z-10 rounded-b-[24px]"></div>
         </div>
@@ -211,9 +208,9 @@
         let selectedUnitId = null;
         let isPolygonsVisible = true; 
         let isMobileMenuOpen = false; 
-        let isPreloaded = false; // Biến đánh dấu đã tải ngầm ảnh hay chưa
+        let isPreloaded = false;
         
-        // CẬP NHẬT TỌA ĐỘ YAW, PITCH, ZOOM MỚI CHO 7 GÓC CAM
+        // CẬP NHẬT TỌA ĐỘ CHÍNH XÁC DO BẠN CUNG CẤP
         const scenesConfig = [
             { id: "tongthe1", name: "Đơn lập Lakeside Residences", image: "images/tongthe1.jpg", polyCol: "poly_tongthe1", defaultYaw: 6.2074, defaultPitch: -0.5533, defaultZoom: 0 },
             { id: "tongthe2", name: "Song lập Lakeside Residences", image: "images/tongthe2.jpg", polyCol: "poly_tongthe2", defaultYaw: 1.1691, defaultPitch: -0.8860, defaultZoom: 0 },
@@ -226,10 +223,13 @@
         
         let currentSceneId = scenesConfig[0].id;
 
+        // HIỆU ỨNG HIỆN/ẨN MÀN HÌNH CHỜ MƯỢT MÀ
         function showLoader() { 
             const loader = document.getElementById('loading-overlay');
             loader.classList.remove('hidden');
-            setTimeout(() => { loader.classList.remove('opacity-0'); }, 10);
+            // Dùng thủ thuật reflow để chắc chắn CSS transition được kích hoạt
+            void loader.offsetWidth;
+            loader.classList.remove('opacity-0');
         }
         function hideLoader() { 
             const loader = document.getElementById('loading-overlay');
@@ -240,7 +240,8 @@
         function showError() { 
             const error = document.getElementById('error-overlay');
             error.classList.remove('hidden');
-            setTimeout(() => { error.classList.remove('opacity-0'); }, 10);
+            void error.offsetWidth;
+            error.classList.remove('opacity-0');
         }
         function hideError() { 
             const error = document.getElementById('error-overlay');
@@ -248,7 +249,6 @@
             setTimeout(() => { error.classList.add('hidden'); }, 500);
         }
 
-        // CHỨC NĂNG TẢI TRƯỚC HÌNH ẢNH BACKGROUND TĂNG TỐC ĐỘ (PRELOAD)
         function preloadOtherPanoramas() {
             scenesConfig.forEach((scene, index) => {
                 if (index !== 0) {
@@ -369,7 +369,6 @@
                 hideLoader();
                 if(isPolygonsVisible) drawPolygonsForCurrentScene(); 
                 
-                // Mới: Bật tải trước các bức ảnh còn lại vào bộ nhớ đệm
                 if(!isPreloaded) {
                     preloadOtherPanoramas();
                     isPreloaded = true;
@@ -414,6 +413,7 @@
             });
         }
 
+        // CƠ CHẾ CHUYỂN CẢNH CAMERA ĐIỆN ẢNH (CINEMATIC TRANSITION)
         function switchScene(sceneId) {
             hideError();
             const targetScene = scenesConfig.find(s => s.id === sceneId);
@@ -429,24 +429,27 @@
             document.querySelectorAll('.glass-btn.scene-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${sceneId}`).classList.add('active');
 
+            // 1. Phủ màn hình Load lên trước (Fade in)
             showLoader();
 
-            // Set góc Camera theo mặc định đã thiết lập
-            psv.setPanorama(targetScene.image, { 
-                yaw: targetScene.defaultYaw, 
-                pitch: targetScene.defaultPitch,
-                zoom: targetScene.defaultZoom,
-                showLoader: false, 
-                transition: 600 /* Giảm thời gian trượt xuống cho cảm giác chuyển nhanh hơn */
-            })
-            .then(() => {
-                hideLoader();
-                if(isPolygonsVisible) drawPolygonsForCurrentScene();
-            })
-            .catch(() => {
-                hideLoader();
-                showError();
-            });
+            // 2. Chờ 500ms cho màn kính Load phủ kín hoàn toàn rồi mới tiến hành nạp ảnh phía sau
+            setTimeout(() => {
+                psv.setPanorama(targetScene.image, { showLoader: false, transition: false })
+                .then(() => {
+                    // Ngay khi ảnh nạp xong phía sau màng kính, khóa chặt camera vào góc chuẩn
+                    psv.rotate({ yaw: targetScene.defaultYaw, pitch: targetScene.defaultPitch });
+                    psv.zoom(targetScene.defaultZoom);
+
+                    if(isPolygonsVisible) drawPolygonsForCurrentScene();
+                    
+                    // 3. Xong xuôi thì cho màn Load mờ dần đi (Fade out) lộ ra không gian mới
+                    hideLoader();
+                })
+                .catch(() => {
+                    hideLoader();
+                    showError();
+                });
+            }, 500); 
         }
 
         function drawPolygonsForCurrentScene() {
