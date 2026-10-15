@@ -44,15 +44,10 @@
         .psv-notification, .psv-loader-container { display: none !important; }
         
         /* HIỆU ỨNG FADE CHO POLYGON KHI BẬT/TẮT */
-        .psv-markers {
-            transition: opacity 0.5s ease-in-out !important;
-        }
-        .markers-hidden .psv-markers {
-            opacity: 0 !important;
-            pointer-events: none !important;
-        }
+        .psv-markers { transition: opacity 0.5s ease-in-out !important; }
+        .markers-hidden .psv-markers { opacity: 0 !important; pointer-events: none !important; }
 
-        /* Hiệu ứng Liquid Glass Apple */
+        /* Hiệu ứng Liquid Glass Apple (Khúc xạ viền) */
         .glass-3d {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(35px) saturate(120%) brightness(105%);
@@ -71,7 +66,7 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Nút menu Camera & Nút Toggle */
+        /* Nút menu Camera & Nút Toggle (Liquid Glass) */
         .glass-btn {
             background: rgba(22, 79, 59, 0.35); 
             backdrop-filter: blur(25px) saturate(150%);
@@ -96,7 +91,7 @@
 
         /* Label tên căn lơ lửng */
         .unit-marker-label {
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(20px) saturate(150%);
             -webkit-backdrop-filter: blur(20px) saturate(150%);
             color: #164f3b;
@@ -120,6 +115,7 @@
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
+        /* Animation Popup Ảnh */
         .popup-zoom-enter { transform: scale(0.9); opacity: 0; }
         .popup-zoom-active { transform: scale(1); opacity: 1; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .popup-zoom-exit { transform: scale(0.9); opacity: 0; transition: all 0.3s ease-out; }
@@ -130,7 +126,6 @@
     <div class="relative w-full h-screen flex">
         
         <!-- Không gian 360 -->
-        <!-- Đã thêm ID để điều khiển class markers-hidden cho hiệu ứng fade -->
         <div id="viewer" class="w-full h-full relative z-0 bg-avh-dark"></div>
 
         <div class="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-4 py-2 rounded-xl text-xs z-20 text-white pointer-events-none shadow-md border border-white/10 flex items-center gap-2">
@@ -185,11 +180,15 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
-            <!-- Tiêu đề -->
+            <!-- Tiêu đề & Dấu mộc (Flexbox tự dãn cách thông minh) -->
             <div class="mb-6">
-                <div class="flex items-center gap-3 mb-2">
-                    <span class="text-white/80 text-sm font-medium">Mã căn:</span>
-                    <h2 id="unit-title" class="text-2xl md:text-3xl font-extrabold uppercase tracking-widest px-4 py-1 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-avh-dark shadow-sm"></h2>
+                <div class="flex items-center gap-3 mb-2 flex-wrap">
+                    <span class="text-white/80 text-sm font-medium whitespace-nowrap">Mã căn:</span>
+                    <div class="flex items-center relative">
+                        <h2 id="unit-title" class="text-2xl md:text-3xl font-extrabold uppercase tracking-widest px-4 py-1 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-avh-dark shadow-sm"></h2>
+                        <!-- Con dấu SOLD OUT tự đẩy sang phải -->
+                        <img id="sold-stamp" src="images/sold.png" class="hidden w-16 h-16 md:w-20 md:h-20 object-contain transform -rotate-12 drop-shadow-md ml-3" alt="Đã bán">
+                    </div>
                 </div>
                 <div class="text-sm text-white/90">Phân khu: <span id="unit-zone" class="font-semibold text-white"></span></div>
             </div>
@@ -343,7 +342,6 @@
 
             markersPlugin = psv.getPlugin(PhotoSphereViewer.MarkersPlugin);
 
-            // Vẽ polygon dù đang ẩn hay hiện (Ẩn/Hiện đã quản lý qua CSS)
             psv.addEventListener('ready', () => drawPolygonsForCurrentScene());
             psv.addEventListener('error', () => showError());
             
@@ -353,12 +351,16 @@
                 }
             });
 
-            // SỰ KIỆN HOVER VÀO POLYGON
+            // SỰ KIỆN HOVER VÀO POLYGON (Nhận biết màu Đã Bán)
             markersPlugin.addEventListener('over-marker', ({ marker }) => {
                 if(marker.id && !marker.id.includes('_label') && marker.id !== selectedUnitId) {
+                    const isSold = marker.data.isSold;
                     markersPlugin.updateMarker({
                         id: marker.id,
-                        svgStyle: { fill: 'rgba(71, 160, 125, 0.85)', stroke: '#ffffff', strokeWidth: '3px', cursor: 'pointer' }
+                        svgStyle: { 
+                            fill: isSold ? 'rgba(239, 68, 68, 0.85)' : 'rgba(71, 160, 125, 0.85)', 
+                            stroke: '#ffffff', strokeWidth: '3px', cursor: 'pointer' 
+                        }
                     });
                 }
             });
@@ -366,9 +368,13 @@
             // SỰ KIỆN RỜI CHUỘT KHỎI POLYGON
             markersPlugin.addEventListener('leave-marker', ({ marker }) => {
                 if(marker.id && !marker.id.includes('_label') && marker.id !== selectedUnitId) {
+                    const isSold = marker.data.isSold;
                     markersPlugin.updateMarker({
                         id: marker.id,
-                        svgStyle: { fill: 'rgba(71, 160, 125, 0.55)', stroke: '#47a07d', strokeWidth: '2px', cursor: 'pointer' }
+                        svgStyle: { 
+                            fill: isSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)', 
+                            stroke: isSold ? '#ef4444' : '#47a07d', strokeWidth: '2px', cursor: 'pointer' 
+                        }
                     });
                 }
             });
@@ -415,16 +421,17 @@
                         const parsedData = JSON.parse(rawData);
                         const polygonArray = parsedData.map(p => [p.yaw, p.pitch]);
 
-                        // Bỏ phân biệt màu Đã Bán. Tất cả đồng bộ Xanh lục bảo, opacity 55%, viền 2px
-                        const fillColor = 'rgba(71, 160, 125, 0.55)';
-                        const strokeColor = '#47a07d';
+                        // Tách màu cho Đã Bán (Đỏ) và Chưa Bán (Xanh Lục)
+                        const isSold = item["Trạng thái"] && item["Trạng thái"].toString().toLowerCase().includes("đã bán");
+                        const fillColor = isSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)';
+                        const strokeColor = isSold ? '#ef4444' : '#47a07d';
 
                         markersPlugin.addMarker({
                             id: unitId,
                             polygon: polygonArray,
                             tooltip: { content: `Nhấp để xem ${unitId}`, position: 'top center' },
                             svgStyle: { fill: fillColor, stroke: strokeColor, strokeWidth: '2px', cursor: 'pointer' },
-                            data: { points: polygonArray } 
+                            data: { points: polygonArray, isSold: isSold } 
                         });
                     } catch (e) {}
                 }
@@ -451,9 +458,13 @@
             if (selectedUnitId && selectedUnitId !== unitId) {
                 const oldMarker = markersPlugin.getMarker(selectedUnitId);
                 if (oldMarker) {
+                    const oldSold = oldMarker.data.isSold;
                     markersPlugin.updateMarker({
                         id: selectedUnitId,
-                        svgStyle: { fill: 'rgba(71, 160, 125, 0.55)', stroke: '#47a07d', strokeWidth: '2px', cursor: 'pointer' }
+                        svgStyle: { 
+                            fill: oldSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)', 
+                            stroke: oldSold ? '#ef4444' : '#47a07d', strokeWidth: '2px', cursor: 'pointer' 
+                        }
                     });
                     markersPlugin.removeMarker(`${selectedUnitId}_label`);
                 }
@@ -461,7 +472,7 @@
 
             selectedUnitId = unitId;
 
-            // Nổi bật Polygon đang chọn (Chuyển sang màu Trắng sữa)
+            // Nổi bật Polygon đang chọn (Màu trắng sữa)
             markersPlugin.updateMarker({
                 id: unitId,
                 svgStyle: { fill: 'rgba(255, 255, 255, 0.6)', stroke: '#ffffff', strokeWidth: '4px' }
@@ -503,6 +514,15 @@
 
             document.getElementById('unit-title').innerText = data["Mã căn"] || data.id || "";
             document.getElementById('unit-zone').innerText = data["Phân khu"] || data.zone || "N/A";
+
+            // KIỂM TRA TRẠNG THÁI ĐÃ BÁN ĐỂ HIỆN CON DẤU ĐỎ
+            const isSoldOut = data["Trạng thái"] && data["Trạng thái"].toString().toLowerCase().includes("đã bán");
+            const stampEl = document.getElementById('sold-stamp');
+            if (isSoldOut) {
+                stampEl.classList.remove('hidden');
+            } else {
+                stampEl.classList.add('hidden');
+            }
 
             const detailsContainer = document.getElementById('unit-details');
             let htmlContent = '';
@@ -568,9 +588,13 @@
             if (selectedUnitId) {
                 const oldMarker = markersPlugin.getMarker(selectedUnitId);
                 if (oldMarker) {
+                    const oldSold = oldMarker.data.isSold;
                     markersPlugin.updateMarker({
                         id: selectedUnitId,
-                        svgStyle: { fill: 'rgba(71, 160, 125, 0.55)', stroke: '#47a07d', strokeWidth: '2px', cursor: 'pointer' }
+                        svgStyle: { 
+                            fill: oldSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)', 
+                            stroke: oldSold ? '#ef4444' : '#47a07d', strokeWidth: '2px', cursor: 'pointer' 
+                        }
                     });
                     markersPlugin.removeMarker(`${selectedUnitId}_label`);
                 }
