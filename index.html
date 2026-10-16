@@ -118,20 +118,18 @@
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Khắc phục lỗi Animation Popup ảnh mượt mà, không bị giật 0.5s */
+        /* Animation Popup ảnh */
         #image-popup { transition: opacity 0.3s ease; }
         #popup-content { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     </style>
 </head>
 <body class="text-gray-100 fixed inset-0 w-full h-[100dvh] overflow-hidden select-none">
 
-    <!-- Cấu trúc Relative Full Screen chặn kéo viền -->
     <div class="relative w-full h-full flex overflow-hidden">
         
         <!-- Viewer 360 -->
         <div id="viewer" class="absolute inset-0 w-full h-full z-0 bg-avh-dark touch-none"></div>
 
-        <!-- Các Nút ẩn đi khi Screenshot (class: hide-on-capture) -->
         <div class="hide-on-capture absolute top-4 left-4 bg-black/50 backdrop-blur-md px-4 py-2 rounded-xl text-xs z-20 text-white pointer-events-none shadow-md border border-white/10 flex items-center gap-2">
             <span class="w-2 h-2 bg-avh-light rounded-full animate-pulse shadow-[0_0_8px_#47a07d]"></span>
             Kéo xoay màn hình & Click vào vị trí căn để xem thông tin
@@ -144,14 +142,21 @@
             </div>
         </div>
 
-        <!-- MÀN HÌNH CHỜ SPLASH SCREEN -->
-        <div id="loading-overlay" class="absolute inset-0 bg-[#0c3828] z-[100] flex flex-col items-center justify-center transition-opacity duration-500 opacity-100">
+        <!-- 1. MÀN HÌNH CHỜ INITIAL (MÀU ĐẶC - LOAD LẦN ĐẦU) -->
+        <div id="initial-loader" class="absolute inset-0 bg-[#0c3828] z-[100] flex flex-col items-center justify-center transition-opacity duration-500 opacity-100">
             <img src="images/logo.png" class="h-24 md:h-32 mb-12 drop-shadow-2xl animate-pulse" alt="An Viet Homes" onerror="this.style.display='none'">
             <div class="relative flex items-center justify-center">
                 <div class="spinner absolute"></div>
                 <span class="text-avh-light font-bold text-xs tracking-widest uppercase relative z-10">Loading</span>
             </div>
             <p class="text-white/70 mt-12 text-sm font-medium tracking-wide">Đang tải không gian 360°. Vui lòng chờ trong giây lát...</p>
+        </div>
+
+        <!-- 2. MÀN HÌNH CHỜ CHUYỂN GÓC (GLASSMORPHISM MỜ) -->
+        <div id="scene-loader" class="absolute inset-0 bg-[#0c3828]/60 backdrop-blur-2xl z-[90] flex flex-col items-center justify-center transition-opacity duration-300 opacity-0 pointer-events-none hidden">
+            <div class="relative flex items-center justify-center">
+                <div class="spinner absolute"></div>
+            </div>
         </div>
 
         <div id="error-overlay" class="absolute inset-0 bg-[#0c3828] z-[100] flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-500">
@@ -198,7 +203,7 @@
 
             <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar relative pr-2 z-10 pb-6"></div>
             
-            <!-- NÚT CHỤP ẢNH (SCREENSHOT) TÍCH HỢP GỌN GÀNG Ở ĐÁY BẢNG -->
+            <!-- NÚT CHỤP ẢNH (SCREENSHOT) -->
             <div class="mt-4 z-20 hide-on-capture">
                 <button id="btn-screenshot" onclick="takeScreenshot()" class="w-full py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-bold rounded-xl transition-all border border-white/30 shadow-md text-[13px] flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -208,10 +213,10 @@
             <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-10 rounded-b-[24px]"></div>
         </div>
 
-        <!-- IMAGE POPUP (Được làm mượt lại) -->
-        <div id="image-popup" class="fixed inset-0 z-[100] opacity-0 pointer-events-none flex items-center justify-center">
-            <div class="absolute inset-0 bg-black/70 backdrop-blur-2xl saturate-150 cursor-pointer" onclick="closeImagePopup()"></div>
-            <div id="popup-content" class="relative z-10 max-w-[95vw] max-h-[90vh] scale-90 transform">
+        <!-- IMAGE POPUP LIGHTBOX -->
+        <div id="image-popup" class="fixed inset-0 z-[100] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 ease-in-out">
+            <div class="absolute inset-0 bg-black/80 backdrop-blur-md cursor-pointer" onclick="closeImagePopup()"></div>
+            <div id="popup-content" class="relative z-10 max-w-[95vw] max-h-[90vh] transform scale-90 transition-transform duration-300 ease-in-out">
                 <button onclick="closeImagePopup()" class="absolute -top-5 -right-5 md:-top-6 md:-right-6 bg-white/10 hover:bg-white/30 backdrop-blur-xl text-white rounded-full p-2 transition-all border border-white/20 shadow-[0_4px_15px_rgba(0,0,0,0.5)] z-50">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -222,7 +227,7 @@
     </div>
 
     <script>
-        // CHỐNG F12 VÀ CHUỘT PHẢI
+        // BẢO MẬT: CHỐNG F12 VÀ CHUỘT PHẢI
         document.addEventListener('contextmenu', event => event.preventDefault());
         document.onkeydown = function(e) {
             if(e.keyCode == 123) return false;
@@ -251,22 +256,34 @@
         
         let currentSceneId = scenesConfig[0].id;
 
-        function showLoader() { 
-            const loader = document.getElementById('loading-overlay');
+        function showSceneLoader() { 
+            const loader = document.getElementById('scene-loader');
             loader.classList.remove('hidden');
             void loader.offsetWidth;
-            loader.classList.remove('opacity-0');
+            loader.classList.replace('opacity-0', 'opacity-100');
+            loader.classList.replace('pointer-events-none', 'pointer-events-auto');
         }
-        function hideLoader() { 
-            const loader = document.getElementById('loading-overlay');
-            loader.classList.add('opacity-0');
-            setTimeout(() => { loader.classList.add('hidden'); }, 500); 
+        function hideSceneLoader() { 
+            const loader = document.getElementById('scene-loader');
+            loader.classList.replace('opacity-100', 'opacity-0');
+            loader.classList.replace('pointer-events-auto', 'pointer-events-none');
+            setTimeout(() => { loader.classList.add('hidden'); }, 300); 
         }
+
+        function hideInitialLoader() {
+            const initLoader = document.getElementById('initial-loader');
+            if(initLoader && !initLoader.classList.contains('hidden')) {
+                initLoader.classList.replace('opacity-100', 'opacity-0');
+                initLoader.classList.add('pointer-events-none');
+                setTimeout(() => initLoader.classList.add('hidden'), 500);
+            }
+        }
+        
         function showError() { 
             const error = document.getElementById('error-overlay');
             error.classList.remove('hidden');
             void error.offsetWidth;
-            error.classList.remove('opacity-0');
+            error.classList.replace('opacity-0', 'opacity-100');
         }
 
         function toggleMobileMenu() {
@@ -295,14 +312,13 @@
             }
         }
 
-        // TỐI ƯU HÓA HIỆU ỨNG MỞ ẢNH 
         function openImagePopup(src) {
             const popup = document.getElementById('image-popup');
             const content = document.getElementById('popup-content');
             document.getElementById('popup-img-source').src = src;
             
             popup.classList.replace('pointer-events-none', 'pointer-events-auto');
-            void popup.offsetWidth; // Kích hoạt repaint
+            void popup.offsetWidth; 
             popup.classList.replace('opacity-0', 'opacity-100');
             content.classList.replace('scale-90', 'scale-100');
         }
@@ -366,7 +382,7 @@
             markersPlugin = psv.getPlugin(PhotoSphereViewer.MarkersPlugin);
 
             psv.addEventListener('ready', () => { 
-                hideLoader();
+                hideInitialLoader();
                 if(isPolygonsVisible) drawPolygonsForCurrentScene(); 
                 if(!isPreloaded) {
                     scenesConfig.forEach((s, i) => { if (i !== 0) { const img = new Image(); img.src = s.image; } });
@@ -374,7 +390,7 @@
                 }
             });
             
-            psv.addEventListener('error', () => { hideLoader(); showError(); });
+            psv.addEventListener('error', () => { hideInitialLoader(); hideSceneLoader(); showError(); });
             
             markersPlugin.addEventListener('select-marker', ({ marker }) => {
                 if(marker.id && !marker.id.includes('_label')) openPanel(marker.id, marker);
@@ -408,16 +424,16 @@
             document.querySelectorAll('.glass-btn.scene-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${sceneId}`).classList.add('active');
 
-            showLoader();
+            showSceneLoader();
             setTimeout(() => {
                 psv.setPanorama(targetScene.image, { showLoader: false, transition: false })
                 .then(() => {
                     psv.rotate({ yaw: targetScene.defaultYaw, pitch: targetScene.defaultPitch });
                     psv.zoom(targetScene.defaultZoom);
                     if(isPolygonsVisible) drawPolygonsForCurrentScene();
-                    hideLoader();
+                    hideSceneLoader();
                 })
-                .catch(() => { hideLoader(); showError(); });
+                .catch(() => { hideSceneLoader(); showError(); });
             }, 300); 
         }
 
@@ -517,11 +533,11 @@
             let imgMatBang = '';
             if (data["Mẫu nhà"]) {
                 const mauNha = data["Mẫu nhà"].toString().trim();
-                imgMatBang += `<img src="images/thietkecan/${mauNha}.png" onclick="openImagePopup(this.src)" class="w-full h-auto object-contain rounded-[12px] border border-white/20 shadow-sm bg-white/10 p-3 cursor-pointer hover:bg-white/20 transition-colors">`;
+                imgMatBang += `<img src="images/thietkecan/${mauNha}.png" onclick="openImagePopup(this.src)" class="w-3/4 mx-auto h-auto object-contain rounded-[12px] border border-white/20 shadow-sm bg-white/10 p-3 cursor-pointer hover:bg-white/20 transition-colors">`;
             }
             
             if (imgDienHoa !== '') htmlContent += `<div class="mt-6"><h3 class="text-white/80 font-bold mb-3 text-[11px] tracking-widest uppercase opacity-80">Hình ảnh diễn họa (Click để phóng to):</h3><div class="grid ${validImgCount === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-3">${imgDienHoa}</div></div>`;
-            if (imgMatBang !== '') htmlContent += `<div class="mt-4"><h3 class="text-white/80 font-bold mb-3 text-[11px] tracking-widest uppercase opacity-80">Mặt bằng căn (Click để phóng to):</h3><div class="w-full">${imgMatBang}</div></div>`;
+            if (imgMatBang !== '') htmlContent += `<div class="mt-4"><h3 class="text-white/80 font-bold mb-3 text-[11px] tracking-widest uppercase opacity-80 text-center">Mặt bằng căn (Click để phóng to):</h3><div class="w-full">${imgMatBang}</div></div>`;
             
             detailsContainer.innerHTML = htmlContent;
         }
@@ -541,51 +557,53 @@
             }
         }
 
-        // TÍNH NĂNG CHỤP ẢNH KÈM THÔNG TIN CĂN
+        // TÍNH NĂNG TẢI ẢNH SNAPSHOT (ĐÃ KHẮC PHỤC LỖI TỪ CHỐI TẢI 360)
         async function takeScreenshot() {
             const btn = document.getElementById('btn-screenshot');
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳ Đang xử lý ảnh...';
 
-            // 1. Giấu toàn bộ UI công cụ không cần thiết
             document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '0');
 
-            try {
-                // 2. Chụp frame WebGL 360 trước
-                const webglCanvas = document.querySelector('.psv-canvas');
-                psv.needsUpdate();
-                psv.renderer.render();
+            // Thêm độ trễ nhỏ để CSS opacity kịp phản hồi trước khi chụp
+            setTimeout(async () => {
+                try {
+                    // Lấy thẻ canvas chứa WebGL của Photo Sphere Viewer an toàn
+                    const webglCanvas = document.querySelector('canvas.psv-canvas') || document.querySelector('canvas');
 
-                // 3. Chụp HTML UI (Thông tin căn) bằng html2canvas
-                const uiCanvas = await html2canvas(document.body, {
-                    backgroundColor: null,
-                    useCORS: true,
-                    logging: false,
-                    ignoreElements: (element) => element.classList.contains('hide-on-capture')
-                });
+                    // Chụp UI HTML
+                    const uiCanvas = await html2canvas(document.body, {
+                        backgroundColor: null, 
+                        useCORS: true, 
+                        logging: false,
+                        scale: 1,
+                        ignoreElements: (element) => element.classList.contains('hide-on-capture')
+                    });
 
-                // 4. Trộn 2 lớp với nhau
-                const finalCanvas = document.createElement('canvas');
-                finalCanvas.width = uiCanvas.width;
-                finalCanvas.height = uiCanvas.height;
-                const ctx = finalCanvas.getContext('2d');
+                    // Gộp 2 lớp bằng 2D Context
+                    const finalCanvas = document.createElement('canvas');
+                    finalCanvas.width = uiCanvas.width;
+                    finalCanvas.height = uiCanvas.height;
+                    const ctx = finalCanvas.getContext('2d');
 
-                ctx.drawImage(webglCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
-                ctx.drawImage(uiCanvas, 0, 0);
+                    if (webglCanvas) {
+                        ctx.drawImage(webglCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+                    }
+                    ctx.drawImage(uiCanvas, 0, 0);
 
-                // 5. Tải về thiết bị
-                const link = document.createElement('a');
-                link.download = `${selectedUnitId || 'AnVietHomes'}_Information.png`;
-                link.href = finalCanvas.toDataURL('image/png', 0.9);
-                link.click();
-            } catch (err) {
-                console.error(err);
-                alert("Thiết bị của bạn không hỗ trợ lưu ảnh 360.");
-            } finally {
-                // Phục hồi lại các UI đã ẩn
-                document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '1');
-                btn.innerHTML = originalText;
-            }
+                    // Tải ảnh về
+                    const link = document.createElement('a');
+                    link.download = `${selectedUnitId || 'AnVietHomes'}_Information.png`;
+                    link.href = finalCanvas.toDataURL('image/png', 0.9);
+                    link.click();
+                } catch (err) {
+                    console.error(err);
+                    alert("Đã xảy ra lỗi khi tạo ảnh. Vui lòng thử lại!");
+                } finally {
+                    document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '1');
+                    btn.innerHTML = originalText;
+                }
+            }, 100);
         }
 
         document.addEventListener('keydown', function(event){
