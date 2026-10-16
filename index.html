@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>360 Real Estate Viewer - An Viet Homes</title>
     <link rel="icon" type="image/png" href="images/favicon.png">
     
@@ -18,6 +18,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.css"/>
     
+    <!-- html2canvas (Dùng cho tính năng Screenshot) -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/three/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/markers-plugin/index.min.js"></script>
@@ -40,14 +43,19 @@
     </script>
 
     <style>
-        body { font-family: 'Manrope', sans-serif; overflow: hidden; background-color: #0c3828; }
+        /* Khóa tràn viền tuyệt đối cho Mobile */
+        body { 
+            font-family: 'Manrope', sans-serif; 
+            background-color: #0c3828; 
+            overscroll-behavior: none;
+        }
         
         .psv-notification, .psv-loader-container { display: none !important; }
         
         .psv-markers { transition: opacity 0.5s ease-in-out !important; }
         .markers-hidden .psv-markers { opacity: 0 !important; pointer-events: none !important; }
 
-        /* Liquid Glass */
+        /* Liquid Glass Apple */
         .glass-3d {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(35px) saturate(120%) brightness(105%);
@@ -56,10 +64,7 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-top: 1px solid rgba(255, 255, 255, 0.4);
             border-left: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 
-                inset 0 1px 2px rgba(255, 255, 255, 0.35), 
-                inset 0 -1px 3px rgba(0, 0, 0, 0.1), 
-                0 15px 35px rgba(0, 0, 0, 0.25); 
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.35), inset 0 -1px 3px rgba(0, 0, 0, 0.1), 0 15px 35px rgba(0, 0, 0, 0.25); 
         }
 
         .transition-panel { transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s; }
@@ -113,31 +118,34 @@
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        .popup-zoom-enter { transform: scale(0.9); opacity: 0; }
-        .popup-zoom-active { transform: scale(1); opacity: 1; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .popup-zoom-exit { transform: scale(0.9); opacity: 0; transition: all 0.3s ease-out; }
+        /* Khắc phục lỗi Animation Popup ảnh mượt mà, không bị giật 0.5s */
+        #image-popup { transition: opacity 0.3s ease; }
+        #popup-content { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     </style>
 </head>
-<body class="text-gray-100">
+<body class="text-gray-100 fixed inset-0 w-full h-[100dvh] overflow-hidden select-none">
 
-    <div class="relative w-full h-screen flex">
+    <!-- Cấu trúc Relative Full Screen chặn kéo viền -->
+    <div class="relative w-full h-full flex overflow-hidden">
         
-        <div id="viewer" class="w-full h-full relative z-0 bg-avh-dark"></div>
+        <!-- Viewer 360 -->
+        <div id="viewer" class="absolute inset-0 w-full h-full z-0 bg-avh-dark touch-none"></div>
 
-        <div class="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-4 py-2 rounded-xl text-xs z-20 text-white pointer-events-none shadow-md border border-white/10 flex items-center gap-2">
+        <!-- Các Nút ẩn đi khi Screenshot (class: hide-on-capture) -->
+        <div class="hide-on-capture absolute top-4 left-4 bg-black/50 backdrop-blur-md px-4 py-2 rounded-xl text-xs z-20 text-white pointer-events-none shadow-md border border-white/10 flex items-center gap-2">
             <span class="w-2 h-2 bg-avh-light rounded-full animate-pulse shadow-[0_0_8px_#47a07d]"></span>
             Kéo xoay màn hình & Click vào vị trí căn để xem thông tin
         </div>
 
-        <div class="absolute top-[60px] left-4 z-20 glass-btn flex items-center gap-3 px-4 py-2 hover:bg-white/10" onclick="togglePolygons()">
+        <div class="hide-on-capture absolute top-[60px] left-4 z-20 glass-btn flex items-center gap-3 px-4 py-2 hover:bg-white/10" onclick="togglePolygons()">
             <span class="text-white/90 text-[13px] font-bold tracking-wide" id="poly-toggle-text">Hiển thị các căn</span>
             <div class="relative w-11 h-6 bg-black/40 rounded-full border border-white/20 shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]">
                 <div id="poly-toggle-knob" class="absolute top-[2px] left-[2px] w-5 h-5 bg-avh-light rounded-full shadow-[0_0_10px_#47a07d] transition-transform duration-300 transform translate-x-5"></div>
             </div>
         </div>
 
-        <!-- MÀN HÌNH CHỜ SPLASH SCREEN ĐÃ ĐƯỢC LÀM TRONG SUỐT VÀ SANG TRỌNG HƠN -->
-        <div id="loading-overlay" class="absolute inset-0 bg-[#0c3828]/60 backdrop-blur-2xl z-[100] flex flex-col items-center justify-center transition-opacity duration-700 opacity-100">
+        <!-- MÀN HÌNH CHỜ SPLASH SCREEN -->
+        <div id="loading-overlay" class="absolute inset-0 bg-[#0c3828] z-[100] flex flex-col items-center justify-center transition-opacity duration-500 opacity-100">
             <img src="images/logo.png" class="h-24 md:h-32 mb-12 drop-shadow-2xl animate-pulse" alt="An Viet Homes" onerror="this.style.display='none'">
             <div class="relative flex items-center justify-center">
                 <div class="spinner absolute"></div>
@@ -146,53 +154,64 @@
             <p class="text-white/70 mt-12 text-sm font-medium tracking-wide">Đang tải không gian 360°. Vui lòng chờ trong giây lát...</p>
         </div>
 
-        <div id="error-overlay" class="absolute inset-0 bg-[#0c3828]/60 backdrop-blur-2xl z-[100] flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-500">
+        <div id="error-overlay" class="absolute inset-0 bg-[#0c3828] z-[100] flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-500">
             <div class="w-20 h-20 rounded-full border-4 border-white/30 flex items-center justify-center mb-6">
                 <span class="text-white text-4xl font-bold">!</span>
             </div>
-            <h2 class="text-white text-lg mb-2 font-semibold">Dữ liệu Camera đang được cập nhật.</h2>
-            <p class="text-white/70 mb-8">Vui lòng quay lại vào thời điểm khác.</p>
-            <button onclick="switchScene('tongthe1')" class="bg-avh-pink text-white font-bold py-3 px-8 rounded-full shadow-[0_0_15px_rgba(234,162,205,0.4)] hover:bg-pink-400 transition-colors">
+            <h2 class="text-white text-lg mb-2 font-semibold">Dữ liệu Camera đang bị lỗi.</h2>
+            <button onclick="switchScene('tongthe1')" class="mt-4 bg-avh-pink text-white font-bold py-3 px-8 rounded-full shadow-[0_0_15px_rgba(234,162,205,0.4)] transition-colors">
                 Quay lại góc Tổng thể 1
             </button>
         </div>
 
-        <div class="absolute bottom-0 w-full h-48 bg-gradient-to-t from-black/80 to-transparent z-10 pointer-events-none"></div>
-        <img src="images/logo.png" class="absolute bottom-6 left-6 md:bottom-8 md:left-8 z-20 h-12 md:h-16 object-contain pointer-events-none drop-shadow-lg" alt="An Viet Homes" onerror="this.style.display='none'">
+        <div class="hide-on-capture absolute bottom-0 w-full h-40 bg-gradient-to-t from-black/90 to-transparent z-10 pointer-events-none"></div>
+        <img src="images/logo.png" class="hide-on-capture absolute bottom-6 left-6 md:bottom-8 md:left-8 z-20 h-12 md:h-16 object-contain pointer-events-none drop-shadow-lg" alt="An Viet Homes" onerror="this.style.display='none'">
 
         <!-- MENU CAMERA -->
-        <div class="absolute bottom-6 md:bottom-8 left-1/2 transform -translate-x-1/2 w-[90%] md:max-w-5xl z-20 flex flex-col items-center">
+        <div class="hide-on-capture absolute bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 w-[95%] md:max-w-5xl z-20 flex flex-col items-center">
             <button id="mobile-menu-btn" class="md:hidden glass-btn flex items-center gap-2 mb-3 shadow-lg" onclick="toggleMobileMenu()">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
                 <span>Chuyển góc Camera</span>
             </button>
-            <div id="scene-menu" class="hidden md:flex flex-row flex-wrap justify-center items-center gap-2 md:gap-3 w-full p-4 md:p-0 bg-black/40 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none rounded-3xl border border-white/10 md:border-none transition-all shadow-2xl md:shadow-none max-h-[40vh] overflow-y-auto no-scrollbar">
+            <div id="scene-menu" class="hidden md:flex flex-row flex-wrap justify-center items-center gap-2 md:gap-3 w-full p-4 md:p-0 bg-black/40 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none rounded-3xl border border-white/10 md:border-none transition-all shadow-2xl md:shadow-none max-h-[35vh] overflow-y-auto no-scrollbar">
             </div>
         </div>
 
         <!-- BẢNG THÔNG TIN LIQUID GLASS -->
-        <div id="info-panel" class="glass-3d absolute top-6 right-6 w-[450px] max-w-[90vw] h-[calc(100vh-48px)] p-6 md:p-8 flex flex-col transform translate-x-[120%] opacity-0 transition-panel z-30 overflow-hidden">
-            <button onclick="closePanel()" class="absolute top-6 right-6 text-white/70 hover:text-white z-50 bg-black/20 rounded-full p-2 backdrop-blur-md transition-colors border border-white/20 shadow-sm">
+        <div id="info-panel" class="glass-3d absolute top-4 right-4 md:top-6 md:right-6 w-[400px] max-w-[92vw] h-[calc(100dvh-32px)] md:h-[calc(100dvh-48px)] p-6 flex flex-col transform translate-x-[120%] opacity-0 transition-panel z-30 overflow-hidden">
+            
+            <button onclick="closePanel()" class="absolute top-4 right-4 text-white/70 hover:text-white z-50 bg-black/20 rounded-full p-2 backdrop-blur-md transition-colors border border-white/20 shadow-sm hide-on-capture">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div class="mb-6">
+
+            <!-- Tiêu đề & Dấu mộc Đã bán -->
+            <div class="mb-4 pr-8">
                 <div class="flex items-center gap-3 mb-2 flex-wrap">
                     <span class="text-white/80 text-sm font-medium whitespace-nowrap">Mã căn:</span>
                     <div class="flex items-center relative">
-                        <h2 id="unit-title" class="text-2xl md:text-3xl font-extrabold uppercase tracking-widest px-4 py-1 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-avh-dark shadow-sm"></h2>
-                        <img id="sold-stamp" src="images/sold.png" class="hidden w-16 h-16 md:w-20 md:h-20 object-contain transform -rotate-12 drop-shadow-md ml-3" alt="Đã bán">
+                        <h2 id="unit-title" class="text-2xl font-extrabold uppercase tracking-widest px-4 py-1 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-avh-dark shadow-sm"></h2>
+                        <img id="sold-stamp" src="images/sold.png" class="hidden w-16 h-16 object-contain transform -rotate-12 drop-shadow-md ml-2" alt="Đã bán">
                     </div>
                 </div>
                 <div class="text-sm text-white/90">Phân khu: <span id="unit-zone" class="font-semibold text-white"></span></div>
             </div>
+
             <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar relative pr-2 z-10 pb-6"></div>
-            <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-black/30 to-transparent pointer-events-none z-10 rounded-b-[24px]"></div>
+            
+            <!-- NÚT CHỤP ẢNH (SCREENSHOT) TÍCH HỢP GỌN GÀNG Ở ĐÁY BẢNG -->
+            <div class="mt-4 z-20 hide-on-capture">
+                <button id="btn-screenshot" onclick="takeScreenshot()" class="w-full py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-bold rounded-xl transition-all border border-white/30 shadow-md text-[13px] flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    TẢI ẢNH THÔNG TIN CĂN
+                </button>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-10 rounded-b-[24px]"></div>
         </div>
 
-        <!-- IMAGE POPUP -->
-        <div id="image-popup" class="fixed inset-0 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
-            <div class="absolute inset-0 bg-black/60 backdrop-blur-2xl saturate-150 cursor-pointer" onclick="closeImagePopup()"></div>
-            <div id="popup-content" class="relative z-10 max-w-[90vw] max-h-[90vh] popup-zoom-enter">
+        <!-- IMAGE POPUP (Được làm mượt lại) -->
+        <div id="image-popup" class="fixed inset-0 z-[100] opacity-0 pointer-events-none flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/70 backdrop-blur-2xl saturate-150 cursor-pointer" onclick="closeImagePopup()"></div>
+            <div id="popup-content" class="relative z-10 max-w-[95vw] max-h-[90vh] scale-90 transform">
                 <button onclick="closeImagePopup()" class="absolute -top-5 -right-5 md:-top-6 md:-right-6 bg-white/10 hover:bg-white/30 backdrop-blur-xl text-white rounded-full p-2 transition-all border border-white/20 shadow-[0_4px_15px_rgba(0,0,0,0.5)] z-50">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -203,6 +222,16 @@
     </div>
 
     <script>
+        // CHỐNG F12 VÀ CHUỘT PHẢI
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.onkeydown = function(e) {
+            if(e.keyCode == 123) return false;
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false;
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) return false;
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) return false;
+            if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+        };
+
         let unitData = [];
         let psv, markersPlugin;
         let selectedUnitId = null;
@@ -210,7 +239,6 @@
         let isMobileMenuOpen = false; 
         let isPreloaded = false;
         
-        // CẬP NHẬT TỌA ĐỘ CHÍNH XÁC DO BẠN CUNG CẤP
         const scenesConfig = [
             { id: "tongthe1", name: "Đơn lập Lakeside Residences", image: "images/tongthe1.jpg", polyCol: "poly_tongthe1", defaultYaw: 6.2074, defaultPitch: -0.5533, defaultZoom: 0 },
             { id: "tongthe2", name: "Song lập Lakeside Residences", image: "images/tongthe2.jpg", polyCol: "poly_tongthe2", defaultYaw: 1.1691, defaultPitch: -0.8860, defaultZoom: 0 },
@@ -223,39 +251,22 @@
         
         let currentSceneId = scenesConfig[0].id;
 
-        // HIỆU ỨNG HIỆN/ẨN MÀN HÌNH CHỜ MƯỢT MÀ
         function showLoader() { 
             const loader = document.getElementById('loading-overlay');
             loader.classList.remove('hidden');
-            // Dùng thủ thuật reflow để chắc chắn CSS transition được kích hoạt
             void loader.offsetWidth;
             loader.classList.remove('opacity-0');
         }
         function hideLoader() { 
             const loader = document.getElementById('loading-overlay');
             loader.classList.add('opacity-0');
-            setTimeout(() => { loader.classList.add('hidden'); }, 700); 
+            setTimeout(() => { loader.classList.add('hidden'); }, 500); 
         }
-        
         function showError() { 
             const error = document.getElementById('error-overlay');
             error.classList.remove('hidden');
             void error.offsetWidth;
             error.classList.remove('opacity-0');
-        }
-        function hideError() { 
-            const error = document.getElementById('error-overlay');
-            error.classList.add('opacity-0');
-            setTimeout(() => { error.classList.add('hidden'); }, 500);
-        }
-
-        function preloadOtherPanoramas() {
-            scenesConfig.forEach((scene, index) => {
-                if (index !== 0) {
-                    const img = new Image();
-                    img.src = scene.image;
-                }
-            });
         }
 
         function toggleMobileMenu() {
@@ -274,7 +285,6 @@
             isPolygonsVisible = !isPolygonsVisible;
             const knob = document.getElementById('poly-toggle-knob');
             const viewerDiv = document.getElementById('viewer');
-            
             if (isPolygonsVisible) {
                 knob.className = 'absolute top-[2px] left-[2px] w-5 h-5 bg-avh-light rounded-full shadow-[0_0_10px_#47a07d] transition-transform duration-300 transform translate-x-5';
                 viewerDiv.classList.remove('markers-hidden');
@@ -285,33 +295,26 @@
             }
         }
 
+        // TỐI ƯU HÓA HIỆU ỨNG MỞ ẢNH 
         function openImagePopup(src) {
             const popup = document.getElementById('image-popup');
-            const popupContent = document.getElementById('popup-content');
+            const content = document.getElementById('popup-content');
             document.getElementById('popup-img-source').src = src;
             
-            popup.classList.remove('hidden');
-            setTimeout(() => {
-                popup.classList.remove('opacity-0');
-                popup.classList.add('opacity-100');
-                popupContent.classList.remove('popup-zoom-enter', 'popup-zoom-exit');
-                popupContent.classList.add('popup-zoom-active');
-            }, 10);
+            popup.classList.replace('pointer-events-none', 'pointer-events-auto');
+            void popup.offsetWidth; // Kích hoạt repaint
+            popup.classList.replace('opacity-0', 'opacity-100');
+            content.classList.replace('scale-90', 'scale-100');
         }
 
         function closeImagePopup() {
             const popup = document.getElementById('image-popup');
-            const popupContent = document.getElementById('popup-content');
+            const content = document.getElementById('popup-content');
             
-            popup.classList.remove('opacity-100');
-            popup.classList.add('opacity-0');
-            popupContent.classList.remove('popup-zoom-active');
-            popupContent.classList.add('popup-zoom-exit');
-            
-            setTimeout(() => {
-                popup.classList.add('hidden');
-                document.getElementById('popup-img-source').src = "";
-            }, 300);
+            popup.classList.replace('opacity-100', 'opacity-0');
+            content.classList.replace('scale-100', 'scale-90');
+            popup.classList.replace('pointer-events-auto', 'pointer-events-none');
+            setTimeout(() => { document.getElementById('popup-img-source').src = ""; }, 300);
         }
 
         function parseCSVRow(str) {
@@ -328,10 +331,9 @@
         async function loadDataAndInitViewer() {
             try {
                 const response = await fetch('data.csv'); 
-                if(!response.ok) throw new Error("Không tìm thấy CSV");
+                if(!response.ok) throw new Error("Không tìm CSV");
                 let csvText = await response.text();
-                csvText = csvText.replace(/\r/g, '');
-                const lines = csvText.split('\n');
+                const lines = csvText.replace(/\r/g, '').split('\n');
                 
                 if (lines.length >= 2) {
                     const headers = parseCSVRow(lines[0]);
@@ -343,15 +345,13 @@
                         unitData.push(obj);
                     }
                 }
-            } catch (error) { console.error("Lỗi tải data.csv:", error); }
-
+            } catch (error) { console.error(error); }
             initViewer();
             renderSceneMenu();
         }
 
         function initViewer() {
             const firstScene = scenesConfig[0];
-            
             psv = new PhotoSphereViewer.Viewer({
                 container: document.querySelector('#viewer'),
                 panorama: firstScene.image,
@@ -368,54 +368,34 @@
             psv.addEventListener('ready', () => { 
                 hideLoader();
                 if(isPolygonsVisible) drawPolygonsForCurrentScene(); 
-                
                 if(!isPreloaded) {
-                    preloadOtherPanoramas();
+                    scenesConfig.forEach((s, i) => { if (i !== 0) { const img = new Image(); img.src = s.image; } });
                     isPreloaded = true;
                 }
             });
             
-            psv.addEventListener('error', () => {
-                hideLoader();
-                showError();
-            });
+            psv.addEventListener('error', () => { hideLoader(); showError(); });
             
             markersPlugin.addEventListener('select-marker', ({ marker }) => {
-                if(marker.id && !marker.id.includes('_label')) {
-                    openPanel(marker.id, marker);
-                }
+                if(marker.id && !marker.id.includes('_label')) openPanel(marker.id, marker);
             });
 
             markersPlugin.addEventListener('over-marker', ({ marker }) => {
                 if(marker.id && !marker.id.includes('_label') && marker.id !== selectedUnitId) {
                     const isSold = marker.data.isSold;
-                    markersPlugin.updateMarker({
-                        id: marker.id,
-                        svgStyle: { 
-                            fill: isSold ? 'rgba(239, 68, 68, 0.85)' : 'rgba(71, 160, 125, 0.85)', 
-                            stroke: '#ffffff', strokeWidth: '3px', cursor: 'pointer' 
-                        }
-                    });
+                    markersPlugin.updateMarker({ id: marker.id, svgStyle: { fill: isSold ? 'rgba(239, 68, 68, 0.85)' : 'rgba(71, 160, 125, 0.85)', stroke: '#ffffff', strokeWidth: '3px', cursor: 'pointer' }});
                 }
             });
 
             markersPlugin.addEventListener('leave-marker', ({ marker }) => {
                 if(marker.id && !marker.id.includes('_label') && marker.id !== selectedUnitId) {
                     const isSold = marker.data.isSold;
-                    markersPlugin.updateMarker({
-                        id: marker.id,
-                        svgStyle: { 
-                            fill: isSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)', 
-                            stroke: isSold ? '#ef4444' : '#47a07d', strokeWidth: '2px', cursor: 'pointer' 
-                        }
-                    });
+                    markersPlugin.updateMarker({ id: marker.id, svgStyle: { fill: isSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)', stroke: isSold ? '#ef4444' : '#47a07d', strokeWidth: '2px', cursor: 'pointer' }});
                 }
             });
         }
 
-        // CƠ CHẾ CHUYỂN CẢNH CAMERA ĐIỆN ẢNH (CINEMATIC TRANSITION)
         function switchScene(sceneId) {
-            hideError();
             const targetScene = scenesConfig.find(s => s.id === sceneId);
             if(!targetScene) return;
 
@@ -424,54 +404,38 @@
             markersPlugin.clearMarkers();
             closePanel();
 
-            if (window.innerWidth < 768 && isMobileMenuOpen) { toggleMobileMenu(); }
-
+            if (window.innerWidth < 768 && isMobileMenuOpen) toggleMobileMenu();
             document.querySelectorAll('.glass-btn.scene-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${sceneId}`).classList.add('active');
 
-            // 1. Phủ màn hình Load lên trước (Fade in)
             showLoader();
-
-            // 2. Chờ 500ms cho màn kính Load phủ kín hoàn toàn rồi mới tiến hành nạp ảnh phía sau
             setTimeout(() => {
                 psv.setPanorama(targetScene.image, { showLoader: false, transition: false })
                 .then(() => {
-                    // Ngay khi ảnh nạp xong phía sau màng kính, khóa chặt camera vào góc chuẩn
                     psv.rotate({ yaw: targetScene.defaultYaw, pitch: targetScene.defaultPitch });
                     psv.zoom(targetScene.defaultZoom);
-
                     if(isPolygonsVisible) drawPolygonsForCurrentScene();
-                    
-                    // 3. Xong xuôi thì cho màn Load mờ dần đi (Fade out) lộ ra không gian mới
                     hideLoader();
                 })
-                .catch(() => {
-                    hideLoader();
-                    showError();
-                });
-            }, 500); 
+                .catch(() => { hideLoader(); showError(); });
+            }, 300); 
         }
 
         function drawPolygonsForCurrentScene() {
             const currentScene = scenesConfig.find(s => s.id === currentSceneId);
             const activeColumn = currentScene.polyCol; 
-
             unitData.forEach(item => {
                 const unitId = item["Mã căn"] || item.id;
                 const rawData = item[activeColumn];
-
                 if (unitId && rawData && rawData.trim() !== "") {
                     try {
                         const parsedData = JSON.parse(rawData);
                         const polygonArray = parsedData.map(p => [p.yaw, p.pitch]);
-
                         const isSold = item["Trạng thái"] && item["Trạng thái"].toString().toLowerCase().includes("đã bán");
                         const fillColor = isSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)';
                         const strokeColor = isSold ? '#ef4444' : '#47a07d';
-
                         markersPlugin.addMarker({
-                            id: unitId,
-                            polygon: polygonArray,
+                            id: unitId, polygon: polygonArray,
                             tooltip: { content: `Nhấp để xem ${unitId}`, position: 'top center' },
                             svgStyle: { fill: fillColor, stroke: strokeColor, strokeWidth: '2px', cursor: 'pointer' },
                             data: { points: polygonArray, isSold: isSold } 
@@ -501,53 +465,26 @@
                 const oldMarker = markersPlugin.getMarker(selectedUnitId);
                 if (oldMarker) {
                     const oldSold = oldMarker.data.isSold;
-                    markersPlugin.updateMarker({
-                        id: selectedUnitId,
-                        svgStyle: { 
-                            fill: oldSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)', 
-                            stroke: oldSold ? '#ef4444' : '#47a07d', strokeWidth: '2px', cursor: 'pointer' 
-                        }
-                    });
+                    markersPlugin.updateMarker({ id: selectedUnitId, svgStyle: { fill: oldSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)', stroke: oldSold ? '#ef4444' : '#47a07d', strokeWidth: '2px', cursor: 'pointer' } });
                     markersPlugin.removeMarker(`${selectedUnitId}_label`);
                 }
             }
 
             selectedUnitId = unitId;
-
-            markersPlugin.updateMarker({
-                id: unitId,
-                svgStyle: { fill: 'rgba(255, 255, 255, 0.6)', stroke: '#ffffff', strokeWidth: '4px' }
-            });
+            markersPlugin.updateMarker({ id: unitId, svgStyle: { fill: 'rgba(255, 255, 255, 0.6)', stroke: '#ffffff', strokeWidth: '4px' } });
 
             const points = markerObj.data.points;
             let sumX = 0, sumY = 0, sumZ = 0;
-            points.forEach(p => {
-                const yaw = p[0];
-                const pitch = p[1];
-                sumX += Math.cos(pitch) * Math.cos(yaw);
-                sumY += Math.cos(pitch) * Math.sin(yaw);
-                sumZ += Math.sin(pitch);
-            });
-            const avgX = sumX / points.length;
-            const avgY = sumY / points.length;
-            const avgZ = sumZ / points.length;
-            
-            const centerYaw = Math.atan2(avgY, avgX);
-            const centerPitch = Math.atan2(avgZ, Math.sqrt(avgX * avgX + avgY * avgY));
+            points.forEach(p => { sumX += Math.cos(p[1]) * Math.cos(p[0]); sumY += Math.cos(p[1]) * Math.sin(p[0]); sumZ += Math.sin(p[1]); });
+            const avgX = sumX / points.length, avgY = sumY / points.length, avgZ = sumZ / points.length;
+            const centerYaw = Math.atan2(avgY, avgX), centerPitch = Math.atan2(avgZ, Math.sqrt(avgX * avgX + avgY * avgY));
 
             markersPlugin.addMarker({
-                id: `${unitId}_label`,
-                position: { yaw: centerYaw, pitch: centerPitch },
-                html: `<div class="unit-marker-label">${unitId}</div>`,
-                anchor: 'bottom center'
+                id: `${unitId}_label`, position: { yaw: centerYaw, pitch: centerPitch },
+                html: `<div class="unit-marker-label">${unitId}</div>`, anchor: 'bottom center'
             });
 
-            psv.animate({
-                yaw: centerYaw + 0.35, 
-                pitch: centerPitch,
-                zoom: 40,
-                speed: 1000
-            });
+            psv.animate({ yaw: centerYaw + 0.35, pitch: centerPitch, zoom: 40, speed: 1000 });
 
             const infoPanel = document.getElementById('info-panel');
             infoPanel.classList.remove('translate-x-[120%]', 'opacity-0');
@@ -558,36 +495,23 @@
 
             const isSoldOut = data["Trạng thái"] && data["Trạng thái"].toString().toLowerCase().includes("đã bán");
             const stampEl = document.getElementById('sold-stamp');
-            if (isSoldOut) { stampEl.classList.remove('hidden'); } else { stampEl.classList.add('hidden'); }
+            if (isSoldOut) stampEl.classList.remove('hidden'); else stampEl.classList.add('hidden');
 
             const detailsContainer = document.getElementById('unit-details');
             let htmlContent = '';
-            
             const excludeColumns = ['STT', 'Mã căn', 'id', 'Phân khu', 'zone', 'Trạng thái', 'images', 'Hình ảnh', 'Hình ảnh diễn họa', 'Mẫu nhà'];
-            
             for (const [key, value] of Object.entries(data)) {
                 if (excludeColumns.includes(key) || key.startsWith('poly_')) continue;
                 if (value === null || value === undefined || value.toString().trim() === "") continue;
-                
-                htmlContent += `
-                    <div class="flex justify-between py-3 border-b border-white/10 items-center">
-                        <span class="text-white/70 text-sm font-medium tracking-wide">${key}</span>
-                        <span class="font-bold text-white text-right text-[15px] drop-shadow-sm">${value}</span>
-                    </div>`;
+                htmlContent += `<div class="flex justify-between py-3 border-b border-white/10 items-center"><span class="text-white/70 text-sm font-medium tracking-wide">${key}</span><span class="font-bold text-white text-right text-[15px] drop-shadow-sm">${value}</span></div>`;
             }
 
-            let imgDienHoa = '';
-            let validImgCount = 0;
-            const hinhAnhData = data["Hình ảnh"] || data.images; 
-            
-            if (hinhAnhData) {
-                let imgArr = typeof hinhAnhData === 'string' ? hinhAnhData.split(',') : [hinhAnhData];
+            let imgDienHoa = '', validImgCount = 0;
+            if (data["Hình ảnh"] || data.images) {
+                let imgArr = typeof (data["Hình ảnh"] || data.images) === 'string' ? (data["Hình ảnh"] || data.images).split(',') : [data["Hình ảnh"] || data.images];
                 const validImages = imgArr.map(img => img.trim()).filter(img => img !== '');
                 validImgCount = validImages.length;
-                
-                validImages.forEach(img => { 
-                    imgDienHoa += `<img src="images/${img}" onclick="openImagePopup(this.src)" class="w-full h-full aspect-video object-cover rounded-[12px] border border-white/20 shadow-md bg-black/10 cursor-pointer hover:opacity-80 transition-opacity">`; 
-                });
+                validImages.forEach(img => { imgDienHoa += `<img src="images/${img}" onclick="openImagePopup(this.src)" class="w-full h-full aspect-video object-cover rounded-[12px] border border-white/20 shadow-md bg-black/10 cursor-pointer hover:opacity-80 transition-opacity">`; });
             }
 
             let imgMatBang = '';
@@ -596,22 +520,8 @@
                 imgMatBang += `<img src="images/thietkecan/${mauNha}.png" onclick="openImagePopup(this.src)" class="w-full h-auto object-contain rounded-[12px] border border-white/20 shadow-sm bg-white/10 p-3 cursor-pointer hover:bg-white/20 transition-colors">`;
             }
             
-            if (imgDienHoa !== '') {
-                const gridClass = validImgCount === 1 ? 'grid-cols-1' : 'grid-cols-2';
-                htmlContent += `
-                <div class="mt-8">
-                    <h3 class="text-white/80 font-bold mb-3 text-[11px] tracking-widest uppercase opacity-80">Hình ảnh diễn họa (Click để phóng to):</h3>
-                    <div class="grid ${gridClass} gap-3">${imgDienHoa}</div>
-                </div>`;
-            }
-
-            if (imgMatBang !== '') {
-                htmlContent += `
-                <div class="mt-6">
-                    <h3 class="text-white/80 font-bold mb-3 text-[11px] tracking-widest uppercase opacity-80">Mặt bằng căn (Click để phóng to):</h3>
-                    <div class="w-full">${imgMatBang}</div>
-                </div>`;
-            }
+            if (imgDienHoa !== '') htmlContent += `<div class="mt-6"><h3 class="text-white/80 font-bold mb-3 text-[11px] tracking-widest uppercase opacity-80">Hình ảnh diễn họa (Click để phóng to):</h3><div class="grid ${validImgCount === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-3">${imgDienHoa}</div></div>`;
+            if (imgMatBang !== '') htmlContent += `<div class="mt-4"><h3 class="text-white/80 font-bold mb-3 text-[11px] tracking-widest uppercase opacity-80">Mặt bằng căn (Click để phóng to):</h3><div class="w-full">${imgMatBang}</div></div>`;
             
             detailsContainer.innerHTML = htmlContent;
         }
@@ -620,29 +530,66 @@
             const infoPanel = document.getElementById('info-panel');
             infoPanel.classList.remove('translate-x-0', 'opacity-100');
             infoPanel.classList.add('translate-x-[120%]', 'opacity-0');
-
             if (selectedUnitId) {
                 const oldMarker = markersPlugin.getMarker(selectedUnitId);
                 if (oldMarker) {
                     const oldSold = oldMarker.data.isSold;
-                    markersPlugin.updateMarker({
-                        id: selectedUnitId,
-                        svgStyle: { 
-                            fill: oldSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)', 
-                            stroke: oldSold ? '#ef4444' : '#47a07d', strokeWidth: '2px', cursor: 'pointer' 
-                        }
-                    });
+                    markersPlugin.updateMarker({ id: selectedUnitId, svgStyle: { fill: oldSold ? 'rgba(239, 68, 68, 0.55)' : 'rgba(71, 160, 125, 0.55)', stroke: oldSold ? '#ef4444' : '#47a07d', strokeWidth: '2px', cursor: 'pointer' } });
                     markersPlugin.removeMarker(`${selectedUnitId}_label`);
                 }
                 selectedUnitId = null;
             }
         }
 
-        document.addEventListener('keydown', function(event){
-            if(event.key === "Escape"){
-                closeImagePopup();
-                closePanel();
+        // TÍNH NĂNG CHỤP ẢNH KÈM THÔNG TIN CĂN
+        async function takeScreenshot() {
+            const btn = document.getElementById('btn-screenshot');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Đang xử lý ảnh...';
+
+            // 1. Giấu toàn bộ UI công cụ không cần thiết
+            document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '0');
+
+            try {
+                // 2. Chụp frame WebGL 360 trước
+                const webglCanvas = document.querySelector('.psv-canvas');
+                psv.needsUpdate();
+                psv.renderer.render();
+
+                // 3. Chụp HTML UI (Thông tin căn) bằng html2canvas
+                const uiCanvas = await html2canvas(document.body, {
+                    backgroundColor: null,
+                    useCORS: true,
+                    logging: false,
+                    ignoreElements: (element) => element.classList.contains('hide-on-capture')
+                });
+
+                // 4. Trộn 2 lớp với nhau
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = uiCanvas.width;
+                finalCanvas.height = uiCanvas.height;
+                const ctx = finalCanvas.getContext('2d');
+
+                ctx.drawImage(webglCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+                ctx.drawImage(uiCanvas, 0, 0);
+
+                // 5. Tải về thiết bị
+                const link = document.createElement('a');
+                link.download = `${selectedUnitId || 'AnVietHomes'}_Information.png`;
+                link.href = finalCanvas.toDataURL('image/png', 0.9);
+                link.click();
+            } catch (err) {
+                console.error(err);
+                alert("Thiết bị của bạn không hỗ trợ lưu ảnh 360.");
+            } finally {
+                // Phục hồi lại các UI đã ẩn
+                document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '1');
+                btn.innerHTML = originalText;
             }
+        }
+
+        document.addEventListener('keydown', function(event){
+            if(event.key === "Escape"){ closeImagePopup(); closePanel(); }
         });
 
         loadDataAndInitViewer();
