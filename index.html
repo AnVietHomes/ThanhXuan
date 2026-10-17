@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>360 Real Estate Viewer - An Viet Homes</title>
-    <!-- Đã thêm Favicon theo yêu cầu -->
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="images/favicon.png">
     
     <!-- Google Fonts: Manrope -->
@@ -123,7 +123,7 @@
         #image-popup { transition: opacity 0.3s ease; }
         #popup-content { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
-        /* MÀU SẮC KHI CHỤP ẢNH (SCREENSHOT MODE) */
+        /* CSS KHI CHỤP ẢNH (SCREENSHOT MODE) */
         .screenshot-mode .glass-3d {
             background: rgba(15, 20, 25, 0.75) !important; /* Đen Slate sang trọng */
             backdrop-filter: none !important;
@@ -136,7 +136,7 @@
             color: #0c3828 !important;
             border: none !important;
         }
-        /* Chuyển Text Mã Căn thành màu trắng khi chụp ảnh */
+        /* Text Mã Căn thành màu trắng khi chụp ảnh */
         .screenshot-mode #unit-title {
             color: #ffffff !important;
             background: rgba(255, 255, 255, 0.2) !important;
@@ -146,10 +146,10 @@
 </head>
 <body class="text-gray-100 fixed inset-0 w-full h-[100dvh] overflow-hidden select-none">
 
-    <!-- Đã thêm ID app-container để khoanh vùng chụp ảnh an toàn -->
-    <div id="app-container" class="relative w-full h-full flex overflow-hidden">
+    <!-- App Container bọc toàn bộ web để chụp ảnh an toàn -->
+    <div id="app-container" class="relative w-full h-full flex overflow-hidden z-10">
         
-        <div id="viewer" class="absolute inset-0 w-full h-full z-0 bg-avh-dark touch-none"></div>
+        <div id="viewer" class="absolute inset-0 w-full h-full z-0 bg-avh-dark touch-none transition-opacity duration-200"></div>
 
         <div class="hide-on-capture absolute top-4 left-4 bg-black/50 backdrop-blur-md px-4 py-2 rounded-xl text-xs z-20 text-white pointer-events-none shadow-md border border-white/10 flex items-center gap-2">
             <span class="w-2 h-2 bg-avh-light rounded-full animate-pulse shadow-[0_0_8px_#47a07d]"></span>
@@ -178,7 +178,7 @@
             <div class="relative w-20 h-20 flex items-center justify-center mb-6">
                 <div class="spinner absolute inset-0 m-auto"></div>
             </div>
-            <p class="text-white/90 mt-2 text-sm font-bold tracking-widest uppercase">Đang tải dữ liệu ảnh 360...</p>
+            <p class="text-white/90 mt-2 text-sm font-bold tracking-widest uppercase text-center">Đang tải dữ liệu ảnh 360...</p>
         </div>
 
         <div id="error-overlay" class="absolute inset-0 bg-[#0c3828] z-[100] flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-500">
@@ -193,7 +193,7 @@
 
         <div class="hide-on-capture absolute bottom-0 w-full h-40 bg-gradient-to-t from-black/90 to-transparent z-10 pointer-events-none"></div>
         
-        <!-- LOGO (Luôn hiển thị kể cả khi chụp ảnh) -->
+        <!-- LOGO -->
         <img src="images/logo.png" class="absolute bottom-6 left-6 md:bottom-8 md:left-8 z-20 h-12 md:h-16 object-contain pointer-events-none drop-shadow-lg" alt="An Viet Homes" onerror="this.style.display='none'">
 
         <!-- MENU CAMERA -->
@@ -213,7 +213,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
-            <!-- Khối Tiêu đề Mã căn -->
+            <!-- Tiêu đề Mã căn -->
             <div class="mb-4 pr-8">
                 <div class="flex items-center gap-3 mb-2 flex-wrap">
                     <span class="text-white/80 text-sm font-medium whitespace-nowrap">Mã căn:</span>
@@ -401,7 +401,6 @@
                 defaultZoomLvl: firstScene.defaultZoom,
                 autorotateSpeed: '0',
                 navbar: false,
-                // LỆNH BẮT BUỘC ĐỂ 3D ENGINE KHÔNG XÓA RAM -> HTML2CANVAS MỚI QUÉT ĐƯỢC ẢNH
                 rendererParameters: { preserveDrawingBuffer: true, alpha: true },
                 plugins: [ PhotoSphereViewer.MarkersPlugin ]
             });
@@ -547,7 +546,7 @@
             for (const [key, value] of Object.entries(data)) {
                 if (excludeColumns.includes(key) || key.startsWith('poly_')) continue;
                 if (value === null || value === undefined || value.toString().trim() === "") continue;
-                // ĐÃ THU NHỎ FONT SIZE Ở ĐÂY ĐỂ TRÁNH TRÀN 2 DÒNG (text-[11px] / text-xs)
+                // Cỡ chữ nhỏ text-[11px] và text-xs để chống rớt dòng khi thông tin dài
                 htmlContent += `<div class="flex justify-between py-2 border-b border-white/10 items-center gap-2">
                     <span class="text-white/70 text-[11px] md:text-xs font-medium tracking-wide leading-tight">${key}</span>
                     <span class="font-bold text-white text-right text-[13px] md:text-sm drop-shadow-sm leading-tight">${value}</span>
@@ -589,74 +588,80 @@
             }
         }
 
-        // TÍNH NĂNG XUẤT ẢNH CHỐNG TREO - SỬ DỤNG TRY/FINALLY ĐỂ ĐẢM BẢO LUÔN KHÔI PHỤC UI
+        // THUẬT TOÁN CHỤP ẢNH DOM-TO-IMAGE AN TOÀN TUYỆT ĐỐI (KHÔNG CRASH)
         async function takeScreenshot() {
             const btn = document.getElementById('btn-screenshot');
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳ Đang xuất ảnh độ phân giải cao...';
 
-            // Ẩn Menu & Nút rườm rà
+            // 1. Ẩn giao diện điều khiển
             document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '0');
-            
-            // Bật màng Đen Slate & Đổi màu chữ mã căn thành trắng
             document.body.classList.add('screenshot-mode');
 
-            // Thêm Watermark An Việt Homes
+            // 2. Thêm Watermark
             const watermark = document.createElement('div');
             watermark.id = 'temp-watermark';
             watermark.className = 'absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white/90 text-[13px] md:text-sm font-semibold tracking-widest z-50 drop-shadow-lg pointer-events-none text-center w-full';
             watermark.innerHTML = 'Tài liệu được sản xuất bởi <span class="font-extrabold text-white">An Việt Homes</span>';
-            document.body.appendChild(watermark);
+            document.getElementById('app-container').appendChild(watermark);
 
-            // Đợi 0.2s cho hiệu ứng CSS phản hồi hoàn toàn
-            await new Promise(r => setTimeout(r, 200));
+            // Cho DOM phản hồi CSS
+            await new Promise(r => setTimeout(r, 150));
 
             try {
-                // Xác định chính xác thẻ Canvas chứa WebGL 3D
-                const webglCanvas = document.querySelector('canvas');
-                if (!webglCanvas) throw new Error("Không thể tìm thấy không gian 360 để chụp.");
-
-                // Yêu cầu Engine 3D vẽ ngay lập tức
+                // Ép WebGL render khung hình mới nhất
                 psv.needsUpdate();
                 psv.renderer.render();
 
-                // Dùng html2canvas chỉ quét khoanh vùng App-Container (Tránh lỗi quét toàn bộ body gây tràn RAM)
-                const containerNode = document.getElementById('app-container');
-                const uiCanvas = await html2canvas(containerNode, {
-                    backgroundColor: null, 
-                    useCORS: true, 
-                    scale: Math.min(window.devicePixelRatio || 1, 2), // Giới hạn Scale tối đa 2 để tránh vỡ/treo trình duyệt
+                // 3. Trích xuất ảnh 360 trực tiếp làm lớp nền tĩnh
+                const psvCanvas = document.querySelector('.psv-canvas') || document.querySelector('canvas');
+                if (!psvCanvas) throw new Error("Lỗi Canvas");
+                
+                const bgData = psvCanvas.toDataURL('image/jpeg', 1.0);
+                const tempBg = document.createElement('img');
+                tempBg.id = 'temp-bg';
+                tempBg.src = bgData;
+                tempBg.className = 'absolute inset-0 w-full h-full object-cover z-[-1] pointer-events-none';
+                document.getElementById('app-container').appendChild(tempBg);
+
+                // 4. Ẩn tạm thời khối Viewer 3D để html2canvas không bị quét lỗi
+                const viewerEl = document.getElementById('viewer');
+                viewerEl.style.opacity = '0';
+
+                await new Promise(r => setTimeout(r, 100));
+
+                // 5. Quét toàn bộ App Container (Lúc này chỉ có ảnh <img> tĩnh và UI HTML -> Rất nhẹ)
+                const finalCanvas = await html2canvas(document.getElementById('app-container'), {
+                    backgroundColor: '#0c3828',
+                    useCORS: true,
+                    scale: window.devicePixelRatio > 1 ? 2 : 1, // Auto scale an toàn
                     logging: false,
                     ignoreElements: (element) => element.classList.contains('hide-on-capture') || element.tagName.toLowerCase() === 'canvas'
                 });
 
-                // Khởi tạo khung ảnh thành phẩm
-                const finalCanvas = document.createElement('canvas');
-                finalCanvas.width = webglCanvas.width;
-                finalCanvas.height = webglCanvas.height;
-                const ctx = finalCanvas.getContext('2d');
-
-                // Lớp 1: Bức ảnh 360 Native
-                ctx.drawImage(webglCanvas, 0, 0);
-                
-                // Lớp 2: UI (Thông tin căn + Polygon)
-                ctx.drawImage(uiCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
-
-                // Kích hoạt tiến trình Download (.jpg tối ưu màu đen tốt hơn)
+                // 6. Tải xuống File
                 const link = document.createElement('a');
-                link.download = `${selectedUnitId || 'AnVietHomes'}_Information.jpg`; 
+                link.download = `${selectedUnitId || 'AnVietHomes'}_Information.jpg`;
                 link.href = finalCanvas.toDataURL('image/jpeg', 0.95);
                 link.click();
 
             } catch (err) {
-                console.error("Lỗi Screenshot:", err);
-                alert("Đã xảy ra lỗi khi tạo ảnh. Vui lòng thử lại!");
+                console.error(err);
+                alert("Lỗi xuất ảnh: Thiết bị có thể bị tràn bộ nhớ. Vui lòng thử lại!");
             } finally {
-                // PHẦN QUAN TRỌNG: LUÔN LUÔN TRẢ LẠI GIAO DIỆN BÌNH THƯỜNG DÙ CÓ LỖI HAY KHÔNG
+                // 7. PHỤC HỒI GIAO DIỆN (LUÔN LUÔN THỰC THI)
                 document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '1');
                 document.body.classList.remove('screenshot-mode');
+                
                 const wm = document.getElementById('temp-watermark');
                 if (wm) wm.remove();
+                
+                const tempBg = document.getElementById('temp-bg');
+                if (tempBg) tempBg.remove();
+                
+                const viewerEl = document.getElementById('viewer');
+                if (viewerEl) viewerEl.style.opacity = '1';
+                
                 btn.innerHTML = originalText;
             }
         }
