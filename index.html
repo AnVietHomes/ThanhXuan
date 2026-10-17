@@ -92,14 +92,11 @@
             box-shadow: inset 0 1px 2px rgba(255,255,255,0.6), 0 0 20px rgba(255,255,255,0.25); 
         }
 
-        /* 
-         * FIX LỖI TEXT LABEL: Bỏ Flexbox, dùng padding cứng để căn chữ chính giữa!
-         */
+        /* FIX HOÀN TOÀN LỖI TEXT POLYGON: Bỏ height, dùng padding và Flexbox an toàn */
         .unit-marker-label {
             background: rgba(255, 255, 255, 0.9);
             color: #164f3b;
-            height: 30px;
-            padding: 6px 18px 0px 18px; /* Đẩy chữ xuống bằng Padding Top */
+            padding: 8px 18px; 
             border-radius: 999px;
             font-weight: 800;
             font-size: 13px;
@@ -107,19 +104,12 @@
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.8);
             pointer-events: none;
-            display: inline-block;
-            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             line-height: 1;
+            white-space: nowrap;
             margin-bottom: 25px; 
-        }
-
-        /* FIX LỖI TEXT MÃ CĂN LỆCH */
-        #unit-title {
-            height: 40px;
-            padding: 8px 16px 0px 16px; /* Đẩy chữ xuống */
-            line-height: 1;
-            display: inline-block;
-            text-align: center;
         }
 
         .spinner {
@@ -158,10 +148,8 @@
 
     <div id="app-container" class="relative w-full h-full flex overflow-hidden z-10">
         
+        <!-- Viewer 360 -->
         <div id="viewer" class="absolute inset-0 w-full h-full z-0 bg-avh-dark touch-none transition-opacity duration-200"></div>
-
-        <!-- ẢNH NỀN TĨNH ẢO DÙNG ĐỂ CHỤP ẢNH (Bình thường sẽ ẩn) -->
-        <img id="screenshot-bg-layer" class="absolute inset-0 w-full h-full object-cover z-[-1] opacity-0 pointer-events-none" />
 
         <div class="hide-on-capture absolute top-4 left-4 bg-black/50 backdrop-blur-md px-4 py-2 rounded-xl text-xs z-20 text-white pointer-events-none shadow-md border border-white/10 flex items-center gap-2">
             <span class="w-2 h-2 bg-avh-light rounded-full animate-pulse shadow-[0_0_8px_#47a07d]"></span>
@@ -205,8 +193,10 @@
 
         <div class="hide-on-capture absolute bottom-0 w-full h-40 bg-gradient-to-t from-black/90 to-transparent z-10 pointer-events-none"></div>
         
+        <!-- LOGO -->
         <img src="images/logo.png" class="absolute bottom-6 left-6 md:bottom-8 md:left-8 z-20 h-12 md:h-16 object-contain pointer-events-none drop-shadow-lg" alt="An Viet Homes" onerror="this.style.display='none'">
 
+        <!-- MENU CAMERA -->
         <div class="hide-on-capture absolute bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 w-[95%] md:max-w-5xl z-20 flex flex-col items-center">
             <button id="mobile-menu-btn" class="md:hidden glass-btn flex items-center gap-2 mb-3 shadow-lg" onclick="toggleMobileMenu()">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -223,12 +213,12 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
-            <!-- Tiêu đề Mã căn -->
+            <!-- FIX MÃ CĂN UI BẢNG THÔNG TIN: Đổi h-10 thành py-2 để ôm chữ vừa vặn không bị lệch -->
             <div class="mb-4 pr-8">
                 <div class="flex items-center gap-3 mb-2 flex-wrap">
                     <span class="text-white/80 text-sm font-medium whitespace-nowrap">Mã căn:</span>
                     <div class="flex items-center relative">
-                        <h2 id="unit-title" class="text-xl md:text-2xl font-extrabold uppercase tracking-widest rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-avh-dark shadow-sm transition-colors"></h2>
+                        <h2 id="unit-title" class="text-xl md:text-2xl font-extrabold uppercase tracking-widest px-4 py-2 flex items-center justify-center rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-avh-dark shadow-sm leading-none m-0 transition-colors whitespace-nowrap"></h2>
                         <img id="sold-stamp" src="images/sold.png" class="hidden w-16 h-16 object-contain transform -rotate-12 drop-shadow-md ml-2" alt="Đã bán">
                     </div>
                 </div>
@@ -246,6 +236,7 @@
             <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-10 rounded-b-[24px]"></div>
         </div>
 
+        <!-- IMAGE POPUP LIGHTBOX -->
         <div id="image-popup" class="fixed inset-0 z-[100] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 ease-in-out">
             <div class="absolute inset-0 bg-black/80 backdrop-blur-md cursor-pointer" onclick="closeImagePopup()"></div>
             <div id="popup-content" class="relative z-10 max-w-[95vw] transform scale-90 transition-transform duration-300 ease-in-out">
@@ -594,17 +585,15 @@
             }
         }
 
-        // TÍNH NĂNG CHỤP ẢNH SIÊU MƯỢT (FIX MẤT NỀN 360) BẰNG TO-DATA-URL NATIVE
+        // THUẬT TOÁN XUẤT ẢNH HOÀN TOÀN MỚI GIỮ NGUYÊN POLYGON & KHÔNG CRASH
         async function takeScreenshot() {
             const btn = document.getElementById('btn-screenshot');
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳ Đang xử lý...';
 
-            // Ẩn Menu
             document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '0');
             document.body.classList.add('screenshot-mode');
 
-            // Thêm Watermark
             const watermark = document.createElement('div');
             watermark.id = 'temp-watermark';
             watermark.className = 'absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white/90 text-[13px] md:text-sm font-semibold tracking-widest z-50 drop-shadow-lg pointer-events-none text-center w-full';
@@ -614,57 +603,52 @@
             await new Promise(r => setTimeout(r, 200));
 
             try {
-                // TỰ TAY TRÍCH XUẤT ẢNH 360 TỪ LÕI WEBGL (Chắc chắn 100% không bị mất nền)
-                const webglCanvas = document.querySelector('.psv-canvas-container canvas') || document.querySelector('canvas');
-                let bgImageSrc = '';
-                if (webglCanvas) {
-                    bgImageSrc = webglCanvas.toDataURL('image/jpeg', 1.0);
-                }
-                
-                // Gán ảnh 360 vừa trích xuất thành 1 lớp nền vật lý (thẻ img) chìm phía dưới
-                const bgLayer = document.getElementById('screenshot-bg-layer');
-                bgLayer.src = bgImageSrc;
-                bgLayer.style.opacity = '1';
-                
-                // Tạm ẩn lõi 3D thật đi để html2canvas không bị rối
-                const viewerEl = document.getElementById('viewer');
-                viewerEl.style.opacity = '0';
+                // Ép WebGL cập nhật khung hình
+                psv.needsUpdate();
+                psv.renderer.render();
 
-                // Chỉ quét CSS và HTML bằng html2canvas
-                const finalCanvas = await html2canvas(document.getElementById('app-container'), {
+                // Lấy thẻ Canvas WebGL (Nền 360)
+                const webglCanvas = document.querySelector('.psv-canvas');
+                if (!webglCanvas) throw new Error("Không lấy được ảnh 360");
+
+                // LƯU Ý QUAN TRỌNG: Không ẩn #viewer đi. Thay vào đó, ta dặn html2canvas BỎ QUA thẻ <canvas>
+                // Nhờ vậy, toàn bộ các Polygon (thẻ <svg>) và Label (thẻ <div>) bên trong #viewer VẪN ĐƯỢC CHỤP LẠI
+                const uiCanvas = await html2canvas(document.getElementById('app-container'), {
                     backgroundColor: null,
                     useCORS: true,
-                    scale: 1, // Đảm bảo mượt mà không crash
+                    scale: 1, // Fix lỗi tràn RAM
                     logging: false,
-                    ignoreElements: (element) => element.classList.contains('hide-on-capture') || element.id === 'viewer'
+                    ignoreElements: (element) => {
+                        return element.classList.contains('hide-on-capture') || element.tagName.toLowerCase() === 'canvas';
+                    }
                 });
 
-                // Tải về
+                // Khởi tạo Canvas Gộp
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = webglCanvas.width;
+                finalCanvas.height = webglCanvas.height;
+                const ctx = finalCanvas.getContext('2d');
+
+                // Dán nền 360 xuống dưới cùng
+                ctx.drawImage(webglCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+                
+                // Dán UI & Polygons (Lớp trong suốt) lên trên cùng
+                ctx.drawImage(uiCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+
+                // Tải xuống
                 const link = document.createElement('a');
                 link.download = `${selectedUnitId || 'AnVietHomes'}_Information.jpg`;
                 link.href = finalCanvas.toDataURL('image/jpeg', 0.95);
                 link.click();
 
             } catch (err) {
-                console.error(err);
-                alert("Lỗi xuất ảnh. Vui lòng thử lại!");
+                console.error("Lỗi Screenshot:", err);
+                alert("Đã xảy ra lỗi hệ thống. Vui lòng thử lại!");
             } finally {
-                // PHỤC HỒI GIAO DIỆN
-                const viewerEl = document.getElementById('viewer');
-                if (viewerEl) viewerEl.style.opacity = '1';
-                
-                const bgLayer = document.getElementById('screenshot-bg-layer');
-                if (bgLayer) {
-                    bgLayer.style.opacity = '0';
-                    bgLayer.src = '';
-                }
-
                 document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '1');
                 document.body.classList.remove('screenshot-mode');
-                
                 const wm = document.getElementById('temp-watermark');
                 if (wm) wm.remove();
-                
                 btn.innerHTML = originalText;
             }
         }
