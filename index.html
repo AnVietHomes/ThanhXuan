@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>360 Real Estate Viewer - An Viet Homes</title>
+    <!-- Đã thêm Favicon theo yêu cầu -->
     <link rel="icon" type="image/png" href="images/favicon.png">
     
     <!-- Google Fonts: Manrope -->
@@ -91,7 +92,6 @@
             box-shadow: inset 0 1px 2px rgba(255,255,255,0.6), 0 0 20px rgba(255,255,255,0.25); 
         }
 
-        /* Tối ưu Label để khi chụp ảnh không bị lệch chữ */
         .unit-marker-label {
             background: rgba(255, 255, 255, 0.9);
             color: #164f3b;
@@ -108,7 +108,7 @@
             align-items: center;
             justify-content: center;
             line-height: 1;
-            margin-bottom: 25px; /* Dùng margin thay cho transform để tránh lỗi html2canvas */
+            margin-bottom: 25px; 
         }
 
         .spinner {
@@ -123,9 +123,9 @@
         #image-popup { transition: opacity 0.3s ease; }
         #popup-content { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
-        /* GIẢI PHÁP CHỤP ẢNH MỚI - Màu nền Premium, Khử xanh đục */
+        /* MÀU SẮC KHI CHỤP ẢNH (SCREENSHOT MODE) */
         .screenshot-mode .glass-3d {
-            background: rgba(15, 20, 25, 0.7) !important; /* Màu đen slate trong suốt siêu sang */
+            background: rgba(15, 20, 25, 0.75) !important; /* Đen Slate sang trọng */
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
             box-shadow: 0 15px 40px rgba(0,0,0,0.4) !important;
@@ -136,11 +136,18 @@
             color: #0c3828 !important;
             border: none !important;
         }
+        /* Chuyển Text Mã Căn thành màu trắng khi chụp ảnh */
+        .screenshot-mode #unit-title {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.2) !important;
+            border-color: rgba(255, 255, 255, 0.4) !important;
+        }
     </style>
 </head>
 <body class="text-gray-100 fixed inset-0 w-full h-[100dvh] overflow-hidden select-none">
 
-    <div class="relative w-full h-full flex overflow-hidden">
+    <!-- Đã thêm ID app-container để khoanh vùng chụp ảnh an toàn -->
+    <div id="app-container" class="relative w-full h-full flex overflow-hidden">
         
         <div id="viewer" class="absolute inset-0 w-full h-full z-0 bg-avh-dark touch-none"></div>
 
@@ -186,7 +193,7 @@
 
         <div class="hide-on-capture absolute bottom-0 w-full h-40 bg-gradient-to-t from-black/90 to-transparent z-10 pointer-events-none"></div>
         
-        <!-- LOGO ĐÃ BỎ LỚP ẨN ĐỂ HIỂN THỊ KHI CHỤP ẢNH -->
+        <!-- LOGO (Luôn hiển thị kể cả khi chụp ảnh) -->
         <img src="images/logo.png" class="absolute bottom-6 left-6 md:bottom-8 md:left-8 z-20 h-12 md:h-16 object-contain pointer-events-none drop-shadow-lg" alt="An Viet Homes" onerror="this.style.display='none'">
 
         <!-- MENU CAMERA -->
@@ -206,20 +213,22 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
-            <!-- Tối ưu Mã căn để text luôn nằm giữa box, không bị lệch -->
+            <!-- Khối Tiêu đề Mã căn -->
             <div class="mb-4 pr-8">
                 <div class="flex items-center gap-3 mb-2 flex-wrap">
                     <span class="text-white/80 text-sm font-medium whitespace-nowrap">Mã căn:</span>
                     <div class="flex items-center relative">
-                        <h2 id="unit-title" class="text-xl md:text-2xl font-extrabold uppercase tracking-widest px-4 h-10 flex items-center justify-center rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-avh-dark shadow-sm leading-none m-0"></h2>
+                        <h2 id="unit-title" class="text-xl md:text-2xl font-extrabold uppercase tracking-widest px-4 h-10 flex items-center justify-center rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-avh-dark shadow-sm leading-none m-0 transition-colors"></h2>
                         <img id="sold-stamp" src="images/sold.png" class="hidden w-16 h-16 object-contain transform -rotate-12 drop-shadow-md ml-2" alt="Đã bán">
                     </div>
                 </div>
                 <div class="text-sm text-white/90">Phân khu: <span id="unit-zone" class="font-semibold text-white"></span></div>
             </div>
 
+            <!-- Khối chi tiết căn hộ -->
             <div id="unit-details" class="flex-1 overflow-y-auto no-scrollbar relative pr-2 z-10 pb-6"></div>
             
+            <!-- NÚT CHỤP ẢNH -->
             <div class="mt-4 z-20 hide-on-capture">
                 <button id="btn-screenshot" onclick="takeScreenshot()" class="w-full py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-bold rounded-xl transition-all border border-white/30 shadow-md text-[13px] flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -392,7 +401,7 @@
                 defaultZoomLvl: firstScene.defaultZoom,
                 autorotateSpeed: '0',
                 navbar: false,
-                // LỆNH QUAN TRỌNG ĐỂ NATIVE RENDERER LƯU LẠI ẢNH SIÊU NÉT
+                // LỆNH BẮT BUỘC ĐỂ 3D ENGINE KHÔNG XÓA RAM -> HTML2CANVAS MỚI QUÉT ĐƯỢC ẢNH
                 rendererParameters: { preserveDrawingBuffer: true, alpha: true },
                 plugins: [ PhotoSphereViewer.MarkersPlugin ]
             });
@@ -515,7 +524,7 @@
 
             markersPlugin.addMarker({
                 id: `${unitId}_label`, position: { yaw: centerYaw, pitch: centerPitch },
-                html: `<div class="unit-marker-label">${unitId}</div>`, anchor: 'bottom center' // Đã dùng CSS margin-bottom để thay transform
+                html: `<div class="unit-marker-label">${unitId}</div>`, anchor: 'bottom center'
             });
 
             psv.animate({ yaw: centerYaw + 0.35, pitch: centerPitch, zoom: 40, speed: 1000 });
@@ -534,10 +543,15 @@
             const detailsContainer = document.getElementById('unit-details');
             let htmlContent = '';
             const excludeColumns = ['STT', 'Mã căn', 'id', 'Phân khu', 'zone', 'Trạng thái', 'images', 'Hình ảnh', 'Hình ảnh diễn họa', 'Mẫu nhà'];
+            
             for (const [key, value] of Object.entries(data)) {
                 if (excludeColumns.includes(key) || key.startsWith('poly_')) continue;
                 if (value === null || value === undefined || value.toString().trim() === "") continue;
-                htmlContent += `<div class="flex justify-between py-3 border-b border-white/10 items-center"><span class="text-white/70 text-sm font-medium tracking-wide">${key}</span><span class="font-bold text-white text-right text-[15px] drop-shadow-sm">${value}</span></div>`;
+                // ĐÃ THU NHỎ FONT SIZE Ở ĐÂY ĐỂ TRÁNH TRÀN 2 DÒNG (text-[11px] / text-xs)
+                htmlContent += `<div class="flex justify-between py-2 border-b border-white/10 items-center gap-2">
+                    <span class="text-white/70 text-[11px] md:text-xs font-medium tracking-wide leading-tight">${key}</span>
+                    <span class="font-bold text-white text-right text-[13px] md:text-sm drop-shadow-sm leading-tight">${value}</span>
+                </div>`;
             }
 
             let imgDienHoa = '', validImgCount = 0;
@@ -554,7 +568,7 @@
                 imgMatBang += `<img src="images/thietkecan/${mauNha}.png" onclick="openImagePopup(this.src)" class="w-full h-auto object-contain rounded-[12px] border border-white/20 shadow-sm bg-white/10 p-3 cursor-pointer hover:bg-white/20 transition-colors">`;
             }
             
-            if (imgDienHoa !== '') htmlContent += `<div class="mt-6"><h3 class="text-white/80 font-bold mb-3 text-[11px] tracking-widest uppercase opacity-80">Hình ảnh diễn họa (Click để phóng to):</h3><div class="grid ${validImgCount === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-3">${imgDienHoa}</div></div>`;
+            if (imgDienHoa !== '') htmlContent += `<div class="mt-4"><h3 class="text-white/80 font-bold mb-3 text-[11px] tracking-widest uppercase opacity-80">Hình ảnh diễn họa (Click để phóng to):</h3><div class="grid ${validImgCount === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-3">${imgDienHoa}</div></div>`;
             if (imgMatBang !== '') htmlContent += `<div class="mt-4"><h3 class="text-white/80 font-bold mb-3 text-[11px] tracking-widest uppercase opacity-80 text-center">Mặt bằng căn (Click để phóng to):</h3><div class="w-full">${imgMatBang}</div></div>`;
             
             detailsContainer.innerHTML = htmlContent;
@@ -575,73 +589,76 @@
             }
         }
 
-        // THUẬT TOÁN CHỤP ẢNH SIÊU NÉT (NATIVE WEBGL MIX)
+        // TÍNH NĂNG XUẤT ẢNH CHỐNG TREO - SỬ DỤNG TRY/FINALLY ĐỂ ĐẢM BẢO LUÔN KHÔI PHỤC UI
         async function takeScreenshot() {
             const btn = document.getElementById('btn-screenshot');
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳ Đang xuất ảnh độ phân giải cao...';
 
-            // Tắt UI không cần thiết
+            // Ẩn Menu & Nút rườm rà
             document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '0');
             
-            // Chuyển UI thông tin sang màu đen trong suốt sang trọng
+            // Bật màng Đen Slate & Đổi màu chữ mã căn thành trắng
             document.body.classList.add('screenshot-mode');
 
-            // THÊM WATERMARK: "Tài liệu được sản xuất bởi An Việt Homes"
+            // Thêm Watermark An Việt Homes
             const watermark = document.createElement('div');
             watermark.id = 'temp-watermark';
             watermark.className = 'absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white/90 text-[13px] md:text-sm font-semibold tracking-widest z-50 drop-shadow-lg pointer-events-none text-center w-full';
             watermark.innerHTML = 'Tài liệu được sản xuất bởi <span class="font-extrabold text-white">An Việt Homes</span>';
             document.body.appendChild(watermark);
 
-            // Bắt buộc 3D Engine Render khung hình hiện tại
-            psv.needsUpdate();
-            psv.renderer.render();
+            // Đợi 0.2s cho hiệu ứng CSS phản hồi hoàn toàn
+            await new Promise(r => setTimeout(r, 200));
 
-            setTimeout(async () => {
-                try {
-                    // Lấy lõi WebGL Canvas siêu nét (Không qua nén)
-                    const webglCanvas = document.querySelector('.psv-canvas');
-                    
-                    // Quét HTML/CSS (UI Thông tin + SVG Polygon) - bỏ qua thẻ canvas để tránh lỗi
-                    const uiCanvas = await html2canvas(document.body, {
-                        backgroundColor: null, 
-                        useCORS: true, 
-                        scale: window.devicePixelRatio || 2, // Đảm bảo UI nét căng
-                        logging: false,
-                        ignoreElements: (element) => element.classList.contains('hide-on-capture') || element.tagName.toLowerCase() === 'canvas'
-                    });
+            try {
+                // Xác định chính xác thẻ Canvas chứa WebGL 3D
+                const webglCanvas = document.querySelector('canvas');
+                if (!webglCanvas) throw new Error("Không thể tìm thấy không gian 360 để chụp.");
 
-                    // Tạo Canvas Khổng lồ để gộp 2 hình với nhau
-                    const finalCanvas = document.createElement('canvas');
-                    finalCanvas.width = webglCanvas.width;
-                    finalCanvas.height = webglCanvas.height;
-                    const ctx = finalCanvas.getContext('2d');
+                // Yêu cầu Engine 3D vẽ ngay lập tức
+                psv.needsUpdate();
+                psv.renderer.render();
 
-                    // Lớp 1: Đổ ảnh WebGL 360 Full HD xuống dưới
-                    ctx.drawImage(webglCanvas, 0, 0);
-                    
-                    // Lớp 2: Đổ màng UI (Đã qua xử lý nét) lên trên
-                    ctx.drawImage(uiCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+                // Dùng html2canvas chỉ quét khoanh vùng App-Container (Tránh lỗi quét toàn bộ body gây tràn RAM)
+                const containerNode = document.getElementById('app-container');
+                const uiCanvas = await html2canvas(containerNode, {
+                    backgroundColor: null, 
+                    useCORS: true, 
+                    scale: Math.min(window.devicePixelRatio || 1, 2), // Giới hạn Scale tối đa 2 để tránh vỡ/treo trình duyệt
+                    logging: false,
+                    ignoreElements: (element) => element.classList.contains('hide-on-capture') || element.tagName.toLowerCase() === 'canvas'
+                });
 
-                    // Xuất xưởng File ảnh
-                    const link = document.createElement('a');
-                    link.download = `${selectedUnitId || 'AnVietHomes'}_Information.jpg`; // Dùng định dạng .jpg nét, tối ưu dung lượng tốt
-                    link.href = finalCanvas.toDataURL('image/jpeg', 0.95);
-                    link.click();
+                // Khởi tạo khung ảnh thành phẩm
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = webglCanvas.width;
+                finalCanvas.height = webglCanvas.height;
+                const ctx = finalCanvas.getContext('2d');
 
-                } catch (err) {
-                    console.error(err);
-                    alert("Trình duyệt không hỗ trợ tải ảnh. Vui lòng cập nhật hoặc đổi trình duyệt.");
-                } finally {
-                    // Trả lại trạng thái Web bình thường
-                    document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '1');
-                    document.body.classList.remove('screenshot-mode');
-                    const wm = document.getElementById('temp-watermark');
-                    if (wm) wm.remove();
-                    btn.innerHTML = originalText;
-                }
-            }, 150); // Độ trễ siêu ngắn chờ CSS render màu Đen mờ kịp thời
+                // Lớp 1: Bức ảnh 360 Native
+                ctx.drawImage(webglCanvas, 0, 0);
+                
+                // Lớp 2: UI (Thông tin căn + Polygon)
+                ctx.drawImage(uiCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+
+                // Kích hoạt tiến trình Download (.jpg tối ưu màu đen tốt hơn)
+                const link = document.createElement('a');
+                link.download = `${selectedUnitId || 'AnVietHomes'}_Information.jpg`; 
+                link.href = finalCanvas.toDataURL('image/jpeg', 0.95);
+                link.click();
+
+            } catch (err) {
+                console.error("Lỗi Screenshot:", err);
+                alert("Đã xảy ra lỗi khi tạo ảnh. Vui lòng thử lại!");
+            } finally {
+                // PHẦN QUAN TRỌNG: LUÔN LUÔN TRẢ LẠI GIAO DIỆN BÌNH THƯỜNG DÙ CÓ LỖI HAY KHÔNG
+                document.querySelectorAll('.hide-on-capture').forEach(el => el.style.opacity = '1');
+                document.body.classList.remove('screenshot-mode');
+                const wm = document.getElementById('temp-watermark');
+                if (wm) wm.remove();
+                btn.innerHTML = originalText;
+            }
         }
 
         document.addEventListener('keydown', function(event){
